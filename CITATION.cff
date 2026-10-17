@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this software in your research or capstone, please cite it as below."
+authors:
+  - family-names: "Arif"
+    given-names: "Muhamad Nur"
+    affiliation: "Universitas Mercu Buana"
+title: "ARIF-Net: Agricultural Risk and Inflation Forecasting Network"
+version: 1.0.0
+date-released: 2026-10-17
+url: "https://github.com/ariftsx/ARIF-Net"
+keywords:
+  - machine-learning
+  - deep-learning
+  - multimodal-forecasting
+  - agricultural-commodities
+  - price-prediction
+  - food-inflation
+  - time-series
+license: MIT
