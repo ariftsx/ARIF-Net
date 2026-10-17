@@ -1,0 +1,9 @@
+{
+  "model": {
+    "type": "tabular",
+    "kind": "svr",
+    "features": "multimodal",
+    "params": { "C": 1.0, "epsilon": 0.1, "gamma": "scale" }
+  },
+  "description": "SVR multimodal"
+}

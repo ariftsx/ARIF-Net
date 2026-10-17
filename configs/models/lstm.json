@@ -1,0 +1,21 @@
+{
+  "model": {
+    "type": "neural",
+    "name": "lstm",
+    "d": 32,
+    "layers": 1,
+    "dropout": 0.1,
+    "emb": 8
+  },
+  "train": {
+    "steps": 320,
+    "batch": 256,
+    "lr": 0.001,
+    "weight_decay": 0.01,
+    "huber_delta": 1.0,
+    "clip": 1.0,
+    "threads": 2,
+    "shock_weight": 2.0
+  },
+  "description": "LSTM univariat — Manogna et al. (2025)"
+}

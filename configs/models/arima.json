@@ -1,0 +1,4 @@
+{
+  "model": { "type": "arima", "order": [5, 1, 1], "seasonal": false },
+  "description": "ARIMA univariat pada harga"
+}

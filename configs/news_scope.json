@@ -1,0 +1,43 @@
+{
+  "_meta": {
+    "note": "Kata kunci untuk filter relevansi berita. Dicocokkan pada judul (case-insensitive, batas kata). Berita relevan kemudian di-scrape isi lengkapnya.",
+    "matching": "case-insensitive pada JUDUL artikel; satu artikel bisa cocok >1 topik"
+  },
+  "topics": {
+    "komoditas_cabai": [
+      "cabai merah keriting", "cabai keriting", "cabe keriting",
+      "harga cabai", "harga cabe", "cabai merah"
+    ],
+    "komoditas_bawang_merah": [
+      "bawang merah", "harga bawang"
+    ],
+    "komoditas_beras": [
+      "harga beras", "beras medium", "beras premium",
+      "stok beras", "impor beras", "beras bulog"
+    ],
+    "pasar_pasokan": [
+      "pasar induk kramat jati", "pasar kramat jati",
+      "pasar induk beras cipinang", "pibc",
+      "pasokan cabai", "pasokan bawang", "pasokan beras",
+      "panen", "gagal panen", "sentra produksi"
+    ],
+    "harga_inflasi_kebijakan": [
+      "harga pangan", "inflasi pangan", "inflasi",
+      "operasi pasar", "het beras", "harga eceran tertinggi",
+      "bapanas", "badan pangan", "bulog", "stabilisasi harga"
+    ],
+    "cuaca_iklim": [
+      "banjir", "kemarau", "el nino", "la nina",
+      "cuaca ekstrem", "curah hujan", "kekeringan"
+    ],
+    "bbm_logistik": [
+      "harga bbm", "bbm naik", "pertalite", "solar",
+      "ongkos angkut", "biaya distribusi", "distribusi pangan"
+    ]
+  },
+  "supplier_regions": [
+    "brebes", "garut", "cianjur", "bandung", "magelang",
+    "temanggung", "cirebon", "indramayu", "karawang",
+    "subang", "demak", "nganjuk", "bima"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "_meta": {
+    "note": "Lokasi pemasok 18 kabupaten untuk data iklim (Open-Meteo). Tier 1 = pemasok utama, Tier 2 = sekunder.",
+    "source": "Centroid kabupaten dari BPS shapefile"
+  },
+  "locations": [
+    {"location_id": "brebes", "kabupaten": "Kabupaten Brebes", "lat": -6.8731, "lon": 109.0422, "tier": 1},
+    {"location_id": "garut", "kabupaten": "Kabupaten Garut", "lat": -7.2175, "lon": 107.9089, "tier": 1},
+    {"location_id": "cianjur", "kabupaten": "Kabupaten Cianjur", "lat": -6.8214, "lon": 107.1419, "tier": 1},
+    {"location_id": "bandung", "kabupaten": "Kabupaten Bandung", "lat": -7.0225, "lon": 107.5596, "tier": 1},
+    {"location_id": "magelang", "kabupaten": "Kabupaten Magelang", "lat": -7.4797, "lon": 110.2177, "tier": 1},
+    {"location_id": "temanggung", "kabupaten": "Kabupaten Temanggung", "lat": -7.3167, "lon": 110.1753, "tier": 1},
+    {"location_id": "cirebon", "kabupaten": "Kabupaten Cirebon", "lat": -6.7066, "lon": 108.5570, "tier": 1},
+    {"location_id": "indramayu", "kabupaten": "Kabupaten Indramayu", "lat": -6.3276, "lon": 108.3220, "tier": 1},
+    {"location_id": "karawang", "kabupaten": "Kabupaten Karawang", "lat": -6.3064, "lon": 107.3372, "tier": 1},
+    {"location_id": "subang", "kabupaten": "Kabupaten Subang", "lat": -6.5714, "lon": 107.7564, "tier": 2},
+    {"location_id": "demak", "kabupaten": "Kabupaten Demak", "lat": -6.8936, "lon": 110.6381, "tier": 2},
+    {"location_id": "nganjuk", "kabupaten": "Kabupaten Nganjuk", "lat": -7.6040, "lon": 111.9070, "tier": 2},
+    {"location_id": "bima", "kabupaten": "Kabupaten Bima", "lat": -8.6514, "lon": 118.7196, "tier": 2},
+    {"location_id": "solok", "kabupaten": "Kabupaten Solok", "lat": -0.7997, "lon": 100.6544, "tier": 2},
+    {"location_id": "bandung_barat", "kabupaten": "Kabupaten Bandung Barat", "lat": -6.8560, "lon": 107.4613, "tier": 2},
+    {"location_id": "sukabumi", "kabupaten": "Kabupaten Sukabumi", "lat": -6.9277, "lon": 106.9300, "tier": 2},
+    {"location_id": "tasikmalaya", "kabupaten": "Kabupaten Tasikmalaya", "lat": -7.3506, "lon": 108.2172, "tier": 2},
+    {"location_id": "kuningan", "kabupaten": "Kabupaten Kuningan", "lat": -6.9758, "lon": 108.4853, "tier": 2}
+  ],
+  "target_market": {
+    "location_id": "kramatjati",
+    "name": "Pasar Induk Kramat Jati",
+    "lat": -6.2728,
+    "lon": 106.8690
+  }
+}

@@ -1,0 +1,34 @@
+# ARIF-Net — Dependencies
+# Core
+numpy>=1.26
+pandas>=2.2
+scipy>=1.14
+requests>=2.31
+
+# Data Collection
+beautifulsoup4>=4.12
+lxml>=5.0
+trafilatura>=2.0
+
+# Preprocessing & Feature Engineering
+scikit-learn>=1.5
+statsmodels>=0.15
+
+# Machine Learning
+xgboost>=3.0
+lightgbm>=4.5
+
+# Deep Learning (CPU-only)
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch>=2.4
+
+# Optional: NLP Sentiment (uncomment jika ingin model sentiment)
+# transformers>=4.40
+# tokenizers>=0.15
+
+# Data Export
+pyarrow>=17.0
+
+# Visualization (opsional)
+# matplotlib>=3.9
+# seaborn>=0.13

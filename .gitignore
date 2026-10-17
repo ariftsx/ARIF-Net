@@ -1,0 +1,61 @@
+# ──────────────────────────────────────────────
+# ARIF-Net — .gitignore
+# ──────────────────────────────────────────────
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+dist/
+build/
+*.whl
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE & Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Operating System files
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Data directories (keep directory structure via .gitkeep)
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+data/final/*
+!data/final/.gitkeep
+
+# Results & Checkpoints (keep directory structure via .gitkeep)
+results/runs/*
+!results/runs/.gitkeep
+results/validation/*
+!results/validation/.gitkeep
+results/test/*
+!results/test/.gitkeep
+results/gap_analysis/*
+!results/gap_analysis/.gitkeep
+
+# Logs
+logs/*
+!logs/.gitkeep
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# Temporary & scratch files
+*.tmp
+*.bak
+scratch/

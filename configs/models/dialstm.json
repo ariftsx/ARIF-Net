@@ -1,0 +1,20 @@
+{
+  "model": {
+    "type": "neural",
+    "name": "dialstm",
+    "d": 32,
+    "dropout": 0.1,
+    "emb": 8
+  },
+  "train": {
+    "steps": 320,
+    "batch": 256,
+    "lr": 0.001,
+    "weight_decay": 0.01,
+    "huber_delta": 1.0,
+    "clip": 1.0,
+    "threads": 2,
+    "shock_weight": 2.0
+  },
+  "description": "DIA-LSTM — Gu et al. (2022): input attention + temporal attention"
+}

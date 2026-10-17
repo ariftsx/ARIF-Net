@@ -1,0 +1,9 @@
+{
+  "model": {
+    "type": "tabular",
+    "kind": "ridge",
+    "features": "multimodal",
+    "params": { "alpha": 1.0 }
+  },
+  "description": "Ridge Regression multimodal"
+}

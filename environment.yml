@@ -1,0 +1,14 @@
+# ARIF-Net — environment untuk seluruh pipeline.
+#
+#   conda env create -f environment.yml
+#   conda activate ARIF-Net
+#   pip install -r requirements.txt
+#
+name: ARIF-Net
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+      - -r requirements.txt

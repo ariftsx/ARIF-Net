@@ -1,0 +1,4 @@
+{
+  "model": { "type": "persistence" },
+  "description": "Naive baseline: r̂ = 0 (harga tidak berubah)"
+}
