@@ -1,9 +1,14 @@
 {
+  "family": "tabular",
+  "_source": "Manogna et al. (2025) Alg. SVR: kernel RBF, C, epsilon; fitur dinormalisasi",
   "model": {
-    "type": "tabular",
     "kind": "svr",
     "features": "multimodal",
-    "params": { "C": 1.0, "epsilon": 0.1, "gamma": "scale" }
-  },
-  "description": "SVR multimodal"
+    "params": {
+      "kernel": "rbf",
+      "C": 1.0,
+      "epsilon": 0.1,
+      "gamma": "scale"
+    }
+  }
 }

@@ -1,0 +1,20 @@
+{
+  "_doc": "Kandidat 0 = default paper (configs/models); lalu sampel acak grid, maks budget (search.py).",
+  "budget": 10,
+  "space": {
+    "model.params.C": [
+      0.1,
+      1.0,
+      10.0
+    ],
+    "model.params.epsilon": [
+      0.01,
+      0.1,
+      0.3
+    ],
+    "model.features": [
+      "multimodal",
+      "harga"
+    ]
+  }
+}

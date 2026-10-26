@@ -1,72 +1,50 @@
-﻿"""
-ARIF-Net -- Two-stage model: TCN-XGBoost hybrid (Zhao et al., 2025).
+"""
+ARIF-Net — TCN-XGBoost hybrid (Zhao et al., 2025).
 
-Tahap 1: TCN menghasilkan embedding dari sequence harga.
-Tahap 2: XGBoost regressor pada embedding + fitur tabular.
+Tahap 1: TCN (6 layer, kernel 3, dilasi 1…32, dropout 0,3, WeightNorm) DILATIH end-to-end pada r(t,h) atas window
+         harga 30 hari (MSE, Adam).
+Tahap 2: representasi TCN (keluaran langkah terakhir + embedding c, h) → XGBoost per komoditas (default Tabel 5:
+         max_depth 10, learning_rate 0,03, subsample 1,0, reg_lambda 1,2; loss kuadrat). Opsi stage2.features =
+         "multimodal" menambah fitur tabular multimodal (varian protokol lama), default "embedding" = sesuai paper.
 """
 from __future__ import annotations
 
-import logging
 import numpy as np
-import pandas as pd
 import torch
 
-from .neural import TCN
+from .. import trainer
+from . import tabular
+from .neural import build_neural
 
 
-class TwoStageModel:
-    """TCN embedding -> XGBoost regressor."""
+def fit_predict(fd, cfg: dict, seed: int, log=print) -> tuple[dict, dict]:
+    s1 = {"model": cfg["stage1"]["model"], "train": cfg["stage1"]["train"]}
+    torch.manual_seed(seed)
+    net = build_neural("tcn", s1, fd)
+    log(f"  tahap 1: TCN ({trainer.n_params(net):,} parameter), {s1['train']['epochs']} epoch")
+    info = trainer.fit(net, fd, s1, seed, log=log)
+    e_tr = trainer.embed(net, fd, fd.train, info["sigma"])
+    e_va = trainer.embed(net, fd, fd.val, info["sigma"])
+    feats = cfg["stage2"].get("features", "embedding")
+    log(f"  tahap 2: XGBoost atas embedding TCN{' + fitur multimodal' if feats == 'multimodal' else ''}")
+    s2 = {"model": {"kind": "xgb", "features": "multimodal", "params": cfg["stage2"].get("params", {})}}
+    if feats == "multimodal":
+        out = tabular.fit_predict(fd, s2, seed, log=log, extra={"train": e_tr, "val": e_va})
+    else:
+        out = _xgb_embedding_only(fd, s2["model"]["params"], seed, e_tr, e_va, log)
+    return out, {**info, "n_params": trainer.n_params(net)}
 
-    name = "tcn_xgb"
 
-    def __init__(self, tcn_cfg: dict, xgb_params: dict | None = None, seed: int = 0):
-        self.tcn = TCN(**tcn_cfg)
-        self.xgb_params = xgb_params or {
-            "n_estimators": 400, "max_depth": 4, "learning_rate": 0.03,
-        }
-        self.seed = seed
-        self.xgb_models = {}
-
-    def fit(self, X_train: pd.DataFrame, y_train: np.ndarray,
-            seq_train: np.ndarray, **kwargs):
-        """Tahap 1: Train TCN, Tahap 2: Extract embedding -> fit XGBoost."""
-        from xgboost import XGBRegressor
-
-        # Tahap 1: TCN (simplified -- pre-trained or quick train)
-        self.tcn.eval()
-
-        # Tahap 2: Extract embeddings
-        with torch.no_grad():
-            seq_t = torch.as_tensor(seq_train, dtype=torch.float32)
-            c_idx = torch.zeros(len(seq_t), dtype=torch.long)  # Simplified
-            h_idx = torch.zeros(len(seq_t), dtype=torch.long)
-            embeddings = self.tcn.embedding(seq_t, c_idx, h_idx).numpy()
-
-        # Fit XGBoost per komoditas
-        for cid in X_train["comcat_id"].unique():
-            mask = X_train["comcat_id"] == cid
-            X = embeddings[mask.values]
-            y = y_train[mask.values]
-            est = XGBRegressor(
-                **self.xgb_params,
-                objective="reg:pseudohubererror",
-                n_jobs=2, random_state=self.seed, verbosity=0,
-            )
-            est.fit(X, y)
-            self.xgb_models[cid] = est
-            logging.info("  TCN-XGB %s: embedding %d -> XGB", cid, X.shape[1])
-
-    def predict(self, X_val: pd.DataFrame, seq_val: np.ndarray) -> np.ndarray:
-        with torch.no_grad():
-            seq_t = torch.as_tensor(seq_val, dtype=torch.float32)
-            c_idx = torch.zeros(len(seq_t), dtype=torch.long)
-            h_idx = torch.zeros(len(seq_t), dtype=torch.long)
-            embeddings = self.tcn.embedding(seq_t, c_idx, h_idx).numpy()
-
-        preds = np.zeros(len(X_val))
-        for cid in X_val["comcat_id"].unique():
-            mask = X_val["comcat_id"] == cid
-            est = self.xgb_models.get(cid)
-            if est is not None:
-                preds[mask.values] = est.predict(embeddings[mask.values])
-        return preds
+def _xgb_embedding_only(fd, params: dict, seed: int, e_tr, e_va, log) -> dict:
+    from ..data import COMMODITIES, target_scale
+    sig = target_scale(fd.train)
+    pred = np.zeros(len(fd.val))
+    for ci, c in enumerate(COMMODITIES):
+        mtr, mva = fd.train.c == ci, fd.val.c == ci
+        Xtr = np.hstack([e_tr[mtr], tabular.horizon_block(fd.train.h[mtr], False)])
+        Xva = np.hstack([e_va[mva], tabular.horizon_block(fd.val.h[mva], False)])
+        est = tabular.make("xgb", params, seed)
+        est.fit(Xtr, fd.train.y[mtr] / sig[ci, fd.train.hi[mtr]])
+        pred[mva] = est.predict(Xva) * sig[ci, fd.val.hi[mva]]
+        log(f"    {c}: XGB {Xtr.shape[0]} × {Xtr.shape[1]}")
+    return {"r_hat": pred}

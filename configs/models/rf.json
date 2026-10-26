@@ -1,6 +1,7 @@
 {
+  "family": "tabular",
+  "_source": "Baseline pohon multimodal",
   "model": {
-    "type": "tabular",
     "kind": "rf",
     "features": "multimodal",
     "params": {
@@ -9,6 +10,5 @@
       "min_samples_leaf": 5,
       "max_features": 0.3
     }
-  },
-  "description": "Random Forest multimodal"
+  }
 }

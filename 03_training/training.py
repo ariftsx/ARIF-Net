@@ -1,13 +1,24 @@
-﻿"""
-ARIF-Net -- Training pipeline & evaluasi model.
+"""
+ARIF-Net — CLI training baseline & model penelitian terdahulu (uji komparasi sebelum desain ARIF-Net).
 
-Melatih dan mengevaluasi semua model baseline dan penelitian terdahulu
-dengan aturan yang sama: data split, preprocessing, dan metrik identik.
+Alur (PROTOKOL_EKSPERIMEN §2, disesuaikan codebase baru: validasi F1–F2, F3 = peran final):
+  1. search    konfigurasi default paper + grid kecil, F1–F2, seed 0 → bekukan results/frozen/<model>.json
+  2. validate  konfigurasi beku × F1–F2 × 5 seed (neural) → results/validation/<model>.csv
+  3. test      latih ulang pada peran final → prediksi test SEKALI (kunci results/test/OPENED.json)
+  run          satu model × satu fold (uji coba / debugging), tidak membekukan apa pun
+
+ARIF-Net (docs/ARIFNET_SPEC.md, docs/PROTOKOL_UJI_PROSPEKTIF.md):
+  search --model arifnet       ≤ 40 kandidat F1–F2 + cek ulang top-3 × 5 seed → bekukan
+  validate --model arifnet     A0 beku × F1–F2 × 5 seed
+  ablate --model arifnet       varian C-1..C-5, E-1, M-1..M-4, X-1 dari A0 beku → validasi 5 seed
+  register --model all         registrasi uji prospektif (semua model beku), SEBELUM data sesudah 2026-09-30 dilihat
+  prospective --model all      pembukaan uji prospektif sekali (sesudah data sampai cutoff dikumpulkan)
 
 Contoh:
-  python -m 03_training.training --model ridge --fold F1
-  python -m 03_training.training --model lstm --fold F1 --seed 42
-  python -m 03_training.training --model all --fold all
+  python -m 03_training.training search --model all
+  python -m 03_training.training validate --model all
+  python -m 03_training.training test --model all [--dry-run]
+  python -m 03_training.training run --model gru --fold F1 --seed 0 --set train.epochs=5
 """
 from __future__ import annotations
 
@@ -15,198 +26,90 @@ import argparse
 import json
 import logging
 import sys
-import time
-from pathlib import Path
+import traceback
 
-import numpy as np
-import pandas as pd
+from .data import VALIDATION_FOLDS
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-from .metrics import basic, table, overall, mape_price
-
-CONFIGS = ROOT / "configs"
-DATA_FINAL = ROOT / "data" / "final"
-RESULTS = ROOT / "results" / "runs"
-FOLDS = ("F1", "F2", "F3")
+MODELS = ("persistence", "arima", "ridge", "svr", "rf", "xgb", "lgbm",
+          "lstm", "gru", "bilstm", "dialstm", "tft", "tcn_xgb")      # baseline: makna `--model all` untuk search/validate
+ARIF = ("arifnet",)
 
 
-def load_model_config(name: str) -> dict:
-    path = CONFIGS / "models" / f"{name}.json"
-    return json.loads(path.read_text(encoding="utf-8"))
+def _known(m: str) -> bool:
+    from .data import CONFIGS, RESULTS
+    return m in MODELS + ARIF or (RESULTS / "frozen" / f"{m}.json").exists() or (CONFIGS / "models" / f"{m}.json").exists()
 
 
-def load_fold_data(fold: str) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Load train dan val data untuk fold tertentu."""
-    train = pd.read_csv(DATA_FINAL / f"dataset_{fold}_train.csv", parse_dates=["origin_date"])
-    val = pd.read_csv(DATA_FINAL / f"dataset_{fold}_val.csv", parse_dates=["origin_date"])
-    return train, val
+def _all_frozen() -> list[str]:
+    from .data import RESULTS
+    return sorted(f.stem for f in (RESULTS / "frozen").glob("*.json"))
 
 
-def create_model(name: str, cfg: dict, train: pd.DataFrame, seed: int = 0):
-    """Factory: buat model berdasarkan nama dan config."""
-    model_cfg = cfg.get("model", cfg)
-    mtype = model_cfg.get("type", name)
-
-    if mtype == "persistence":
-        from .models.persistence import PersistenceModel
-        return PersistenceModel()
-
-    if mtype == "arima":
-        from .models.arima import ARIMAModel
-        return ARIMAModel(order=model_cfg.get("order", (5, 1, 1)))
-
-    if mtype == "tabular":
-        from .models.tabular import TabularModel
-        return TabularModel(
-            kind=model_cfg["kind"],
-            features=model_cfg.get("features", "multimodal"),
-            params=model_cfg.get("params", {}),
-            seed=seed,
-        )
-
-    if mtype == "neural":
-        # Neural models require PyTorch training loop
-        return _create_neural(name, cfg, train, seed)
-
-    if mtype == "twostage":
-        from .models.twostage import TwoStageModel
-        return TwoStageModel(
-            tcn_cfg=model_cfg.get("stage1", {}),
-            xgb_params=model_cfg.get("stage2", {}).get("params", {}),
-            seed=seed,
-        )
-
-    raise KeyError(f"Unknown model type: {mtype}")
-
-
-def _create_neural(name: str, cfg: dict, train: pd.DataFrame, seed: int):
-    """Placeholder: neural models memerlukan training loop khusus (lihat train_neural)."""
-    from .models.neural import build_neural
-    model_cfg = cfg.get("model", cfg)
-    model_name = model_cfg.get("name", name)
-
-    # Hitung dimensi fitur
-    meta_cols = {"comcat_id", "commodity", "origin_date", "h",
-                 "target_date_nominal", "label_date", "label_gap_days",
-                 "price_origin", "price_label", "r",
-                 "origin_holiday_carry", "origin_spike_reversal"}
-    n_tabular = len([c for c in train.columns if c not in meta_cols])
-    n_climate = len([c for c in train.columns if c.startswith("clim_")])
-    n_calendar = len([c for c in train.columns if c.startswith("cal_")])
-
-    return build_neural(model_name, model_cfg, n_tabular, n_climate, n_calendar)
-
-
-def train_tabular(model, train: pd.DataFrame, val: pd.DataFrame) -> dict:
-    """Latih model tabular (sklearn-compatible) dan evaluasi."""
-    t0 = time.time()
-    y_train = train["r"].values
-    model.fit(train, y_train)
-    r_hat = model.predict(val)
-    elapsed = time.time() - t0
-
-    val_result = val.copy()
-    val_result["r_hat"] = r_hat
-    metrics_tab = table(val_result)
-    metrics_overall = overall(metrics_tab)
-
-    return {
-        "model": str(model),
-        "train_rows": len(train),
-        "val_rows": len(val),
-        "train_seconds": round(elapsed, 1),
-        "metrics_overall": metrics_overall,
-        "metrics_per_ch": metrics_tab.to_dict("records"),
-        "predictions": val_result[["comcat_id", "h", "origin_date", "r", "r_hat"]].to_dict("records"),
-    }
-
-
-def run_one(model_name: str, fold: str, seed: int = 0) -> dict:
-    """Latih satu model pada satu fold."""
-    logging.info("=" * 60)
-    logging.info("Model: %s | Fold: %s | Seed: %d", model_name, fold, seed)
-    logging.info("=" * 60)
-
-    cfg = load_model_config(model_name)
-    train, val = load_fold_data(fold)
-    logging.info("Data: train=%d val=%d", len(train), len(val))
-
-    model = create_model(model_name, cfg, train, seed)
-    result = train_tabular(model, train, val)
-    result.update({
-        "model_name": model_name, "fold": fold, "seed": seed,
-        "config": cfg,
-    })
-
-    # Simpan hasil
-    run_id = f"{model_name}_{fold}_s{seed}_{int(time.time())}"
-    out_dir = RESULTS / run_id
-    out_dir.mkdir(parents=True, exist_ok=True)
-
-    # Simpan metrik (tanpa predictions yang besar)
-    result_save = {k: v for k, v in result.items() if k != "predictions"}
-    (out_dir / "result.json").write_text(
-        json.dumps(result_save, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
-
-    # Simpan predictions
-    pred_df = pd.DataFrame(result["predictions"])
-    pred_df.to_csv(out_dir / "predictions.csv", index=False)
-
-    logging.info("Overall: relMAE=%.4f MAE=%.6f RMSE=%.6f DA=%.3f",
-                 result["metrics_overall"]["relmae"],
-                 result["metrics_overall"]["mae"],
-                 result["metrics_overall"]["rmse"],
-                 result["metrics_overall"]["dir_acc"])
-    logging.info("Saved -> %s", out_dir)
-    return result
+def _parse_set(items: list[str]) -> dict:
+    out = {}
+    for it in items or []:
+        k, v = it.split("=", 1)
+        try:
+            out[k] = json.loads(v)
+        except json.JSONDecodeError:
+            out[k] = v
+    return out
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="ARIF-Net training pipeline.")
-    ap.add_argument("--model", required=True,
-                    help="Nama model (persistence, arima, ridge, svr, rf, xgb, lgbm, "
-                         "lstm, gru, bilstm, dialstm, tft, tcn_xgb) atau 'all'")
-    ap.add_argument("--fold", default="F1", help="Fold validasi (F1/F2/F3) atau 'all'")
+    ap = argparse.ArgumentParser(description="ARIF-Net training baseline & model terdahulu.")
+    ap.add_argument("cmd", choices=["run", "search", "validate", "test", "ablate", "register", "prospective"])
+    ap.add_argument("--model", required=True, help=f"{', '.join(MODELS)} atau 'all' (bisa dipisah koma)")
+    ap.add_argument("--fold", default="F1", help=f"untuk `run`: {', '.join(VALIDATION_FOLDS)}")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--set", nargs="*", help="override config untuk `run`, mis. train.epochs=5 model.d=64")
+    ap.add_argument("--dry-run", action="store_true", help="`test`: gladi resik pada F2, data test tidak disentuh")
     args = ap.parse_args()
-
+    for stream in (sys.stdout, sys.stderr):                    # konsol Windows (cp1252) tidak bisa cetak ▶ × σ
+        stream.reconfigure(encoding="utf-8", errors="replace")
     logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
+    log = logging.info
 
-    # Daftar model tabular (bisa langsung dilatih)
-    tabular_models = ["persistence", "arima", "ridge", "svr", "rf", "xgb", "lgbm"]
-    all_models = tabular_models + ["lstm", "gru", "bilstm", "dialstm", "tft", "tcn_xgb"]
+    if args.model == "all":
+        models = _all_frozen() if args.cmd in ("register", "prospective") else list(MODELS)
+    else:
+        models = args.model.split(",")
+    unknown = [m for m in models if not _known(m)]
+    if unknown:
+        log(f"model tidak dikenal: {unknown}")
+        return 2
 
-    models = all_models if args.model == "all" else [args.model]
-    folds = list(FOLDS) if args.fold == "all" else [args.fold]
+    if args.cmd == "test":
+        from .final_test import run_test
+        return run_test(models, log=log, dry_run=args.dry_run)
+    if args.cmd == "register":
+        from .final_test import register
+        return register(models, log=log)
+    if args.cmd == "prospective":
+        from .final_test import run_prospective
+        return run_prospective(models, log=log)
 
-    results_summary = []
-    for model_name in models:
-        for fold in folds:
-            try:
-                result = run_one(model_name, fold, args.seed)
-                results_summary.append({
-                    "model": model_name, "fold": fold, "seed": args.seed,
-                    **result["metrics_overall"],
-                })
-            except Exception as exc:
-                logging.error("GAGAL %s/%s: %s", model_name, fold, exc)
-                results_summary.append({
-                    "model": model_name, "fold": fold, "seed": args.seed,
-                    "error": str(exc),
-                })
-
-    # Summary table
-    if results_summary:
-        summary = pd.DataFrame(results_summary)
-        RESULTS.mkdir(parents=True, exist_ok=True)
-        summary.to_csv(RESULTS / "training_summary.csv", index=False)
-        print("\n" + "=" * 80)
-        print("TRAINING SUMMARY")
-        print("=" * 80)
-        print(summary.to_string(index=False))
-
+    failed = []
+    for m in models:
+        try:
+            if args.cmd == "run":
+                from . import runs
+                runs.run(m, args.fold, args.seed, cfg=runs.load_config(m, _parse_set(args.set)), tag="coba", log=log)
+            elif args.cmd == "search":
+                from .search import search
+                search(m, log=log)
+            elif args.cmd == "validate":
+                from .final_test import validate
+                validate(m, log=log)
+            elif args.cmd == "ablate":
+                from .final_test import ablate
+                ablate(m, log=log)
+        except Exception:                                      # noqa: BLE001 — dicatat, lalu exit code ≠ 0
+            failed.append(m)
+            logging.error("GAGAL %s:\n%s", m, traceback.format_exc())
+    if failed:
+        logging.error("Model gagal: %s", failed)
+        return 1
     return 0
 
 

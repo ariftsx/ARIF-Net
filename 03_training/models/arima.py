@@ -1,60 +1,74 @@
 """
-ARIF-Net — ARIMA baseline: univariat pada riwayat harga per komoditas.
+ARIF-Net — Baseline ARIMA (Manogna et al., 2025; Amalia et al., 2026; PROTOKOL_EKSPERIMEN P4-DG-09).
 
-ARIMA difit per komoditas pada harga (bukan return), kemudian prediksi
-dihitung sebagai return r = (P̂(t+h) − P(t)) / P(t).
+Per komoditas, pada log harga seri hari terlapor (indeks hari kerja):
+  1. d dipilih dengan uji ADF (α = 0,05) pada data latih: stasioner → d = 0, bila tidak → d = 1 (Manogna, Alg. ARIMA).
+  2. (p, q) dipilih dengan AIC dari grid kecil pada data latih (setara auto_arima, Amalia et al.).
+  3. Parameter di-fit SEKALI per fold pada seri < batas evaluasi; untuk tiap origin t model difilter maju sampai t
+     (hanya observasi ≤ t, parameter tetap) lalu diramal k langkah, k = jumlah hari kerja di (t, t+h].
+  r̂ = exp(ln P̂(t+k) − ln P(t)) − 1.
 """
 from __future__ import annotations
 
-import logging
+import warnings
+
 import numpy as np
 import pandas as pd
 
+from ..data import COMMODITIES, DATA_PROCESSED, FoldData
 
-class ARIMAModel:
-    """ARIMA univariat sebagai baseline statistik klasik."""
 
-    name = "arima"
+def business_steps(t: np.datetime64, h: int) -> int:
+    return max(int(np.busday_count(t + np.timedelta64(1, "D"), t + np.timedelta64(h + 1, "D"))), 1)
 
-    def __init__(self, order=(5, 1, 1), seasonal=False):
-        self.order = tuple(order)
-        self.seasonal = seasonal
-        self.models = {}
 
-    def fit(self, X_train: pd.DataFrame, y_train: np.ndarray, **kwargs):
-        """Fit ARIMA per komoditas pada data harga historis."""
-        from statsmodels.tsa.arima.model import ARIMA
+def choose_d(x: np.ndarray, alpha: float = 0.05) -> int:
+    from statsmodels.tsa.stattools import adfuller
+    return 0 if adfuller(x, autolag="AIC")[1] < alpha else 1
 
-        for cid in X_train["comcat_id"].unique():
-            mask = X_train["comcat_id"] == cid
-            prices = X_train.loc[mask, "price_origin"].values
-            try:
-                model = ARIMA(prices, order=self.order)
-                self.models[cid] = model.fit(method_kwargs={"maxiter": 200})
-                logging.info("ARIMA fit %s: AIC=%.1f", cid, self.models[cid].aic)
-            except Exception as exc:
-                logging.warning("ARIMA fit gagal %s: %s", cid, exc)
-                self.models[cid] = None
 
-    def predict(self, X_val: pd.DataFrame) -> np.ndarray:
-        """Prediksi return r̂ = (P̂(t+h) − P(t)) / P(t)."""
-        preds = np.zeros(len(X_val))
-        for cid in X_val["comcat_id"].unique():
-            mask = X_val["comcat_id"] == cid
-            model = self.models.get(cid)
-            if model is None:
-                continue  # Fallback to 0 (persistence)
-            p0 = X_val.loc[mask, "price_origin"].values
-            h = X_val.loc[mask, "h"].values
-            # Forecast using trained model
-            try:
-                forecast = model.forecast(steps=max(h))
-                for i, (p, horizon) in enumerate(zip(p0, h)):
-                    if horizon <= len(forecast) and p > 0:
-                        preds[mask.values.nonzero()[0][i]] = (forecast[horizon - 1] - p) / p
-            except Exception:
-                pass  # Fallback to 0
-        return preds
-
-    def __repr__(self):
-        return f"ARIMAModel(order={self.order})"
+def fit_predict(fd: FoldData, cfg: dict, seed: int, log=print) -> dict:
+    from statsmodels.tsa.arima.model import ARIMA
+    m = cfg["model"]
+    p_grid, q_grid = m.get("p", [0, 1, 2, 3, 5]), m.get("q", [0, 1, 2])
+    pred = np.zeros(len(fd.val))
+    info = {}
+    for ci, c in enumerate(COMMODITIES):
+        df = pd.read_csv(DATA_PROCESSED / "pihps" / f"prices_{c}.csv", parse_dates=["date"])
+        dates, logp = df["date"].to_numpy("datetime64[D]"), np.log(df["price"].to_numpy(float))
+        mva = fd.val.c == ci
+        o_va, h_va = fd.val.origin[mva], fd.val.h[mva]
+        n_tr = int(np.searchsorted(dates, o_va.min(), side="left"))     # seri latih: < awal evaluasi
+        d = m.get("d") if m.get("d") is not None else choose_d(logp[:n_tr])
+        best = None
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            for p in p_grid:
+                for q in q_grid:
+                    try:
+                        res = ARIMA(logp[:n_tr], order=(p, d, q), trend="n").fit()
+                    except Exception:                                    # noqa: BLE001 — ordo gagal konvergen dilewati
+                        continue
+                    if np.isfinite(res.aic) and (best is None or res.aic < best[1].aic):
+                        best = ((p, d, q), res)
+        if best is None:
+            raise RuntimeError(f"ARIMA {c}: tidak ada ordo yang konvergen")
+        order, res = best
+        cache = {}
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            for t in np.unique(o_va):
+                i = int(np.searchsorted(dates, t, side="right"))         # observasi ≤ t
+                rf = res.apply(logp[:i])                                 # filter maju, parameter tetap
+                kmax = max(business_steps(t, h) for h in h_va[o_va == t])
+                cache[t] = (np.asarray(rf.forecast(kmax)), logp[i - 1])
+        out = np.empty(len(o_va))
+        for j, (t, h) in enumerate(zip(o_va, h_va)):
+            fc, last = cache[t]
+            out[j] = np.exp(fc[business_steps(t, h) - 1] - last) - 1
+        if not np.all(np.isfinite(out)):
+            raise RuntimeError(f"ARIMA {c}: prediksi tidak hingga")
+        pred[mva] = out
+        info[c] = {"order": list(order), "aic": float(res.aic)}
+        log(f"    {c}: ARIMA{order} AIC {res.aic:.1f}; {len(np.unique(o_va))} origin")
+    return {"r_hat": pred, "info": info}

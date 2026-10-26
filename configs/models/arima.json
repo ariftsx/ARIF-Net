@@ -1,4 +1,19 @@
 {
-  "model": { "type": "arima", "order": [5, 1, 1], "seasonal": false },
-  "description": "ARIMA univariat pada harga"
+  "family": "arima",
+  "_source": "Manogna et al. (2025) Alg. ARIMA: ADF → d, ordo via AIC; Amalia et al. (2026) auto_arima",
+  "model": {
+    "d": null,
+    "p": [
+      0,
+      1,
+      2,
+      3,
+      5
+    ],
+    "q": [
+      0,
+      1,
+      2
+    ]
+  }
 }

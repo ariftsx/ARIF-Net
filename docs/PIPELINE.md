@@ -70,7 +70,9 @@ Konversi raw JSON PIHPS menjadi CSV harga harian per komoditas:
 
 Hitung fitur berita per hari:
 - **Sentimen**: Keyword-based (default) atau transformer-based (opsional)
-- **Agregasi**: jumlah berita, sentimen mean/min/max, count per topik
+- **Tanggal tersedia** (Data Contract §6, P1-DG-34): artikel ber-jam → tanggal terbit WIB; artikel bertanggal saja
+  (tanpa jam / `T00:00:00`, mis. detik) → **+1 hari**; tanpa waktu terbit → dikeluarkan
+- **Agregasi** per tanggal tersedia: jumlah berita, sentimen mean/min/max, count per topik
 - Output: `data/processed/news/news_features.csv`
 
 ### 2c. Preprocess Climate (`preprocess_climate.py`)
@@ -94,43 +96,65 @@ r(t,h) = (P(t+h) - P(t)) / P(t)
 ### 2e. Build Dataset (`build_dataset.py`)
 
 Gabungkan semua fitur menjadi dataset final:
-- **Fitur harga**: lag, return, MA, volatilitas, momentum (~40 fitur)
-- **Fitur iklim**: suhu, hujan, kelembapan, dll. (~8 fitur)
-- **Fitur berita**: sentimen, count, topik (~15 fitur)
-- **Fitur BBM**: harga 3 jenis BBM (~3 fitur)
-- **Fitur kalender**: holiday, weekend, Ramadan, dll. (~10 fitur)
+- **Fitur harga** (bebas skala, hanya data ≤ t): return 1–30 observasi, posisi terhadap MA & CV 5–90, volatilitas,
+  satu level `price_level` = log harga. Level mentah Rp (lag/MA) tidak dipakai karena tidak stasioner
+- **Fitur iklim**: Tier-1 mean, memakai data **t − 5 hari** (jeda rilis, `configs/project.json` `availability`)
+- **Fitur berita**: sentimen, count, topik (14 fitur, tanggal tersedia ≤ t)
+- **Fitur BBM**: perubahan log 30/365 hari dan lama sejak penyesuaian, 3 jenis BBM (harga BBM berbentuk tangga)
+- **Fitur kalender**: pada origin t (`cal_*`) dan pada tanggal target t+h (`tgt_cal_*`, known future untuk TFT)
 - **Fitur horizon**: one-hot + log(h)
-- Split kronologis: train/val per fold + test
+
+**Split rolling-origin + purging** (`configs/project.json` `validation`):
+
+| Peran | Origin t | Syarat label |
+|---|---|---|
+| F1 train / val | < 2022-07-01 / 2022-07-01 → 2023-06-30 | < 2022-07-01 / < 2024-07-01 |
+| F2 train / val | < 2023-07-01 / 2023-07-01 → 2024-06-30 | < 2023-07-01 / < 2024-07-01 |
+| F3 = final train | < 2024-07-01 | < 2024-07-01 |
+| Test (sekali buka) | 2024-07-01 → 2026-09-30 | ≤ 2026-09-30 |
+
+Purging membuang baris yang labelnya melewati batas, sehingga tidak ada label latih yang "melihat" periode
+evaluasi. Akibatnya val F2 tidak memiliki h = 365 (labelnya jatuh di periode test) dan h = 180 hanya sebagian.
+
+Output: `dataset_{F1,F2}_{train,val}.csv`, `dataset_final_train.csv`, `dataset_test.csv`, `feature_registry.csv`.
 
 ---
 
 ## Tahap 3: Training & Evaluation (`03_training/`)
 
-### Training (`training.py`)
+Alur (PROTOKOL_EKSPERIMEN codebase lama, disesuaikan): **search → validate → test sekali buka → analyze**.
 
-Semua model dilatih dengan aturan identik:
-- Dataset yang sama (output build_dataset)
-- Split kronologis yang sama (walk-forward 3-fold)
-- Metrik evaluasi yang sama
-- Per komoditas, pooled over horizons
+```bash
+python run.py train search   --model all     # default paper + grid kecil, F1-F2, seed 0 -> results/frozen/
+python run.py train validate --model all     # konfigurasi beku x F1-F2 x 5 seed (neural) -> results/validation/
+python run.py train test     --model all --dry-run   # gladi resik di F2 (data test tidak disentuh)
+python run.py train test     --model all     # SEKALI: latih final -> test -> results/test/ (kunci OPENED.json)
+python run.py analyze [--source test]        # gap analysis dari konfigurasi beku saja
+python run.py train run --model gru --fold F1 --set train.epochs=1   # uji coba satu model
+```
 
-### Metrics (`metrics.py`)
+| Modul | Isi |
+|---|---|
+| `data.py` | satu pintu data: baca split (cek purging), imputasi & standardisasi (z dipotong ±5) di-fit di LATIH per komoditas, sequence harga (L × 4: rel_logp, ret, gap, mask) dan sequence iklim t−5 (DIA-LSTM), σ_{c,h}, ambang shock Q95 |
+| `trainer.py` | training loop neural (Adam; loss MSE/Huber/MAE); jumlah epoch = hyperparameter dari kurva checkpoint |
+| `models/` | persistence, ARIMA (ADF → d, AIC → p,q, filter maju per origin), tabular (Ridge/SVR/RF/XGB/LGBM), neural (LSTM/GRU, BiLSTM, DIA-LSTM, TFT, TCN), TCN-XGBoost |
+| `runs.py` | jalankan model × peran data, catat `results/runs/<run_id>/` |
+| `search.py`, `final_test.py` | pencarian & pembekuan; validasi multi-seed; uji akhir dengan kunci |
+| `metrics.py` | relMAE (seleksi), MAE, RMSE, MASE, R², DA, MAPE/MAE Rp, shock MAE (Q95 latih), DM-HLN (loss absolut) |
 
-| Metrik | Rumus | Interpretasi |
-|--------|-------|--------------|
-| MAE | mean(\|y - y_hat\|) | Error rata-rata absolut |
-| RMSE | sqrt(mean((y - y_hat)^2)) | Error rata-rata kuadrat |
-| relMAE | MAE / MAE_persistence | < 1.0 = lebih baik dari baseline |
-| DA | P(sign(y_hat) == sign(y)) | Akurasi arah perubahan |
-| DM Test | Diebold-Mariano statistic | Signifikansi perbedaan model |
+Kesetiaan terhadap paper dan adaptasinya: **`docs/MODEL_ADAPTATIONS.md`**.
+
+**Komputasi.** `train.threads = "auto"` (configs/models) dan `n_jobs` model pohon memakai jumlah **core fisik**
+mesin yang menjalankan; untuk menimpa: `set ARIFNET_THREADS=8` (Windows CMD) sebelum `python run.py train ...`.
+Default paper LSTM/GRU (128 unit, L = 250, batch 64, sampai 50 epoch) berat: di laptop 2 core ±7,8 menit/epoch
+(LSTM) dan ±3,7 menit/epoch (GRU) pada F1. Pencarian dapat dilanjutkan bila terputus (`results/search/<model>.partial.csv`),
+jadi jalankan model berat terpisah, mis. `python run.py train search --model lstm`.
 
 ### Gap Analysis (`analyze_gaps.py`)
 
-Analisis otomatis yang menghasilkan:
-1. Ranking model per horizon dan komoditas
-2. Skenario di mana **semua** model gagal (gap)
-3. Perbandingan multimodal vs harga saja
-4. Rekomendasi arsitektur ARIF-Net
+Hanya membaca hasil **konfigurasi beku** (run validasi bertag `valid`, atau prediksi test), tidak pernah run
+kandidat pencarian. Menghasilkan ranking per horizon & komoditas, skenario di mana semua model gagal (gap),
+perbandingan multimodal vs harga saja, dan rekomendasi arsitektur ARIF-Net.
 
 Output: `results/gap_analysis/gap_analysis_report.md`
 

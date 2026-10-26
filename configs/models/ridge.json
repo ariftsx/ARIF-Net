@@ -1,9 +1,11 @@
 {
+  "family": "tabular",
+  "_source": "Baseline linear multimodal",
   "model": {
-    "type": "tabular",
     "kind": "ridge",
     "features": "multimodal",
-    "params": { "alpha": 1.0 }
-  },
-  "description": "Ridge Regression multimodal"
+    "params": {
+      "alpha": 1.0
+    }
+  }
 }

@@ -174,13 +174,16 @@ python run.py collect --step news_norm
 # Preprocessing seluruh data
 python run.py preprocess
 
-# Training satu model
-python run.py train --model ridge --fold F1
+# Training: search (default paper + grid, F1-F2) -> validate (5 seed) -> test sekali buka
+python run.py train search   --model all
+python run.py train validate --model all
+python run.py train test     --model all --dry-run   # gladi resik di F2
+python run.py train test     --model all             # SEKALI
 
-# Training semua model tabular
-python run.py train --model all --fold all
+# Uji coba satu model
+python run.py train run --model gru --fold F1 --set train.epochs=1
 
-# Gap analysis
+# Gap analysis (konfigurasi beku saja)
 python run.py analyze
 ```
 
@@ -203,7 +206,7 @@ python -m 02_preprocessing.build_target             # Bangun target r(t,h)
 python -m 02_preprocessing.build_dataset            # Dataset final
 
 # Training
-python -m 03_training.training --model xgb --fold F1 --seed 42
+python -m 03_training.training run --model xgb --fold F1 --seed 42
 python -m 03_training.analyze_gaps                  # Gap analysis
 ```
 

@@ -1,20 +1,21 @@
 {
+  "family": "neural",
+  "_source": "Baseline deep: BiLSTM harga + tabular multimodal (concat)",
   "model": {
-    "type": "neural",
     "name": "bilstm",
-    "d": 32,
-    "dropout": 0.1,
+    "d": 64,
+    "dropout": 0.2,
     "emb": 8
   },
   "train": {
-    "steps": 320,
-    "batch": 256,
+    "loss": "mse",
     "lr": 0.001,
-    "weight_decay": 0.01,
-    "huber_delta": 1.0,
-    "clip": 1.0,
-    "threads": 2,
-    "shock_weight": 2.0
-  },
-  "description": "BiLSTM multimodal — baseline deep (concat semua modalitas)"
+    "weight_decay": 0.0,
+    "batch": 64,
+    "epochs": 50,
+    "clip": 0.0,
+    "threads": "auto",
+    "shock_weight": 1.0,
+    "L": 60
+  }
 }
