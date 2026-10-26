@@ -1,0 +1,53 @@
+{
+  "_doc": "SPEC §3: varian = konfigurasi beku A0 + override (hyperparameter & epoch identik).",
+  "variants": {
+    "C-1": {
+      "model.hurdle": false
+    },
+    "C-2": {
+      "model.drift": false
+    },
+    "C-3": {
+      "model.quantile": false
+    },
+    "C-4": {
+      "model.point_loss": "mse",
+      "model.hurdle": false,
+      "model.quantile": false
+    },
+    "C-5": {
+      "train.shock_weight": 1.0
+    },
+    "E-1-lstm": {
+      "model.encoder": "lstm"
+    },
+    "E-1-tcn": {
+      "model.encoder": "tcn"
+    },
+    "M-1": {
+      "model.modalities": [
+        "NEWS"
+      ]
+    },
+    "M-2": {
+      "model.modalities": [
+        "CLIM"
+      ]
+    },
+    "M-3": {
+      "model.modalities": [
+        "BBM"
+      ]
+    },
+    "M-4": {
+      "model.modalities": [
+        "NEWS",
+        "CLIM",
+        "BBM"
+      ]
+    },
+    "X-1": {
+      "family": "arifnet_gate"
+    }
+  }
+}
