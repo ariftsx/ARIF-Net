@@ -1,0 +1,30 @@
+{
+ "model": "svr",
+ "frozen_utc": "2026-10-23T15:24:51+00:00",
+ "selection": "rata-rata relMAE F1–F2, seed 0 (PROTOKOL P4-DG-05; epoch = hyperparameter v1.0.1)",
+ "score": 0.896955475872981,
+ "per_fold": {
+  "F1": 0.8827250598566956,
+  "F2": 0.9111858918892665
+ },
+ "n_candidates": 10,
+ "overrides": {
+  "model.params.C": 0.1,
+  "model.params.epsilon": 0.01,
+  "model.features": "harga"
+ },
+ "config": {
+  "family": "tabular",
+  "_source": "Manogna et al. (2025) Alg. SVR: kernel RBF, C, epsilon; fitur dinormalisasi",
+  "model": {
+   "kind": "svr",
+   "features": "harga",
+   "params": {
+    "kernel": "rbf",
+    "C": 0.1,
+    "epsilon": 0.01,
+    "gamma": "scale"
+   }
+  }
+ }
+}

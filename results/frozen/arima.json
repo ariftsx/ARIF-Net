@@ -1,0 +1,31 @@
+{
+ "model": "arima",
+ "frozen_utc": "2026-10-23T15:21:43+00:00",
+ "selection": "rata-rata relMAE F1–F2, seed 0 (PROTOKOL P4-DG-05; epoch = hyperparameter v1.0.1)",
+ "score": 1.0075694875863577,
+ "per_fold": {
+  "F1": 1.0019254123320454,
+  "F2": 1.0132135628406702
+ },
+ "n_candidates": 1,
+ "overrides": {},
+ "config": {
+  "family": "arima",
+  "_source": "Manogna et al. (2025) Alg. ARIMA: ADF → d, ordo via AIC; Amalia et al. (2026) auto_arima",
+  "model": {
+   "d": null,
+   "p": [
+    0,
+    1,
+    2,
+    3,
+    5
+   ],
+   "q": [
+    0,
+    1,
+    2
+   ]
+  }
+ }
+}

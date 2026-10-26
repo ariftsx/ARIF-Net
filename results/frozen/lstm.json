@@ -1,0 +1,36 @@
+{
+ "model": "lstm",
+ "frozen_utc": "2026-10-25T11:06:20+00:00",
+ "selection": "rata-rata relMAE F1–F2, seed 0 (PROTOKOL P4-DG-05; epoch = hyperparameter v1.0.1)",
+ "score": 0.9638047219557857,
+ "per_fold": {
+  "F1": 1.0044843570032027,
+  "F2": 0.9231250869083688
+ },
+ "n_candidates": 10,
+ "overrides": {
+  "train.epochs": 20
+ },
+ "config": {
+  "family": "neural",
+  "_source": "Manogna et al. (2025): 1 LSTM 128 unit, dropout 0,2, Dense(1), MSE, Adam, batch 64, 50 epoch, univariat; window 1000 → disesuaikan (L)",
+  "model": {
+   "name": "lstm",
+   "d": 128,
+   "layers": 1,
+   "dropout": 0.2,
+   "emb": 8
+  },
+  "train": {
+   "loss": "mse",
+   "lr": 0.001,
+   "weight_decay": 0.0,
+   "batch": 64,
+   "epochs": 20,
+   "clip": 0.0,
+   "threads": "auto",
+   "shock_weight": 1.0,
+   "L": 250
+  }
+ }
+}

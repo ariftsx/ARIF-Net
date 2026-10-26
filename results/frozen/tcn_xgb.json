@@ -1,0 +1,54 @@
+{
+ "model": "tcn_xgb",
+ "frozen_utc": "2026-10-24T14:15:58+00:00",
+ "selection": "rata-rata relMAE F1–F2, seed 0 (PROTOKOL P4-DG-05; epoch = hyperparameter v1.0.1)",
+ "score": 1.1109092123310105,
+ "per_fold": {
+  "F1": 1.2302145524710297,
+  "F2": 0.9916038721909914
+ },
+ "n_candidates": 8,
+ "overrides": {
+  "stage1.train.epochs": 10,
+  "stage2.params.max_depth": 4,
+  "stage2.features": "embedding"
+ },
+ "config": {
+  "family": "tcn_xgb",
+  "_source": "Zhao et al. (2025): TCN 6 layer, kernel 3, dilasi 1..32, dropout 0,3, WeightNorm, window 30 → XGBoost depth 10, lr 0,03, subsample 1,0, lambda 1,2, loss kuadrat",
+  "stage1": {
+   "model": {
+    "name": "tcn",
+    "d": 32,
+    "kernel": 3,
+    "levels": 6,
+    "dropout": 0.3,
+    "emb": 8
+   },
+   "train": {
+    "loss": "mse",
+    "lr": 0.001,
+    "weight_decay": 0.0,
+    "batch": 64,
+    "epochs": 10,
+    "clip": 0.0,
+    "threads": "auto",
+    "shock_weight": 1.0,
+    "L": 30
+   }
+  },
+  "stage2": {
+   "features": "embedding",
+   "params": {
+    "n_estimators": 400,
+    "max_depth": 4,
+    "learning_rate": 0.03,
+    "subsample": 1.0,
+    "colsample_bytree": 1.0,
+    "min_child_weight": 1,
+    "reg_lambda": 1.2,
+    "objective": "reg:squarederror"
+   }
+  }
+ }
+}

@@ -1,0 +1,30 @@
+{
+ "model": "rf",
+ "frozen_utc": "2026-10-23T15:29:37+00:00",
+ "selection": "rata-rata relMAE F1–F2, seed 0 (PROTOKOL P4-DG-05; epoch = hyperparameter v1.0.1)",
+ "score": 0.8755143655544586,
+ "per_fold": {
+  "F1": 0.8829692644066462,
+  "F2": 0.8680594667022709
+ },
+ "n_candidates": 8,
+ "overrides": {
+  "model.params.max_depth": null,
+  "model.params.min_samples_leaf": 20,
+  "model.params.max_features": 0.3
+ },
+ "config": {
+  "family": "tabular",
+  "_source": "Baseline pohon multimodal",
+  "model": {
+   "kind": "rf",
+   "features": "multimodal",
+   "params": {
+    "n_estimators": 300,
+    "max_depth": null,
+    "min_samples_leaf": 20,
+    "max_features": 0.3
+   }
+  }
+ }
+}

@@ -1,0 +1,40 @@
+{
+ "model": "tft",
+ "frozen_utc": "2026-10-24T12:18:58+00:00",
+ "selection": "rata-rata relMAE F1–F2, seed 0 (PROTOKOL P4-DG-05; epoch = hyperparameter v1.0.1)",
+ "score": 0.8746427642266079,
+ "per_fold": {
+  "F1": 0.9002092119742794,
+  "F2": 0.8490763164789364
+ },
+ "n_candidates": 10,
+ "overrides": {
+  "model.d": 32,
+  "model.dropout": 0.0,
+  "train.lr": 0.0001,
+  "model.heads": 4,
+  "train.epochs": 30
+ },
+ "config": {
+  "family": "neural",
+  "_source": "Amalia et al. (2026) Tabel 2: hidden {16..128}, dropout {0..0,3}, lr {1e-5..1e-2}, heads {1..4}; point = kuantil 0,5 (loss MAE); harga + kalender known future",
+  "model": {
+   "name": "tft",
+   "d": 32,
+   "heads": 4,
+   "dropout": 0.0,
+   "emb": 8
+  },
+  "train": {
+   "loss": "mae",
+   "lr": 0.0001,
+   "weight_decay": 0.0,
+   "batch": 64,
+   "epochs": 30,
+   "clip": 0.0,
+   "threads": "auto",
+   "shock_weight": 1.0,
+   "L": 60
+  }
+ }
+}

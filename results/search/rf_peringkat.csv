@@ -1,0 +1,9 @@
+cand,overrides,F1,F2,skor
+5,"{""model.params.max_depth"": null, ""model.params.min_samples_leaf"": 20, ""model.params.max_features"": 0.3}",0.8829692644066462,0.8680594667022709,0.8755143655544586
+6,"{""model.params.max_depth"": 8, ""model.params.min_samples_leaf"": 20, ""model.params.max_features"": 0.6}",0.8861452259181554,0.8859245700826521,0.8860348980004038
+1,"{""model.params.max_depth"": null, ""model.params.min_samples_leaf"": 20, ""model.params.max_features"": 0.6}",0.8942992672793246,0.8923669594636235,0.8933331133714741
+0,{},0.92224605405361,0.8825587772576484,0.9024024156556292
+7,"{""model.params.max_depth"": 8, ""model.params.min_samples_leaf"": 1, ""model.params.max_features"": 0.6}",0.9415684858924365,0.8871250071596841,0.9143467465260603
+2,"{""model.params.max_depth"": null, ""model.params.min_samples_leaf"": 1, ""model.params.max_features"": 0.3}",0.9756231526646489,0.8688363170148767,0.9222297348397628
+3,"{""model.params.max_depth"": null, ""model.params.min_samples_leaf"": 1, ""model.params.max_features"": 0.6}",0.9665202354417262,0.8806136156506775,0.9235669255462018
+4,"{""model.params.max_depth"": 16, ""model.params.min_samples_leaf"": 1, ""model.params.max_features"": 0.6}",0.970605601638856,0.8817105944537633,0.9261580980463097

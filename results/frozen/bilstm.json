@@ -1,0 +1,39 @@
+{
+ "model": "bilstm",
+ "frozen_utc": "2026-10-23T20:01:23+00:00",
+ "selection": "rata-rata relMAE F1–F2, seed 0 (PROTOKOL P4-DG-05; epoch = hyperparameter v1.0.1)",
+ "score": 0.855047851251274,
+ "per_fold": {
+  "F1": 0.8226456207078864,
+  "F2": 0.8874500817946617
+ },
+ "n_candidates": 10,
+ "overrides": {
+  "model.d": 64,
+  "model.dropout": 0.3,
+  "train.lr": 0.0001,
+  "train.L": 30,
+  "train.epochs": 1
+ },
+ "config": {
+  "family": "neural",
+  "_source": "Baseline deep: BiLSTM harga + tabular multimodal (concat)",
+  "model": {
+   "name": "bilstm",
+   "d": 64,
+   "dropout": 0.3,
+   "emb": 8
+  },
+  "train": {
+   "loss": "mse",
+   "lr": 0.0001,
+   "weight_decay": 0.0,
+   "batch": 64,
+   "epochs": 1,
+   "clip": 0.0,
+   "threads": "auto",
+   "shock_weight": 1.0,
+   "L": 30
+  }
+ }
+}

@@ -1,0 +1,36 @@
+{
+ "model": "lgbm",
+ "frozen_utc": "2026-10-23T15:31:27+00:00",
+ "selection": "rata-rata relMAE F1–F2, seed 0 (PROTOKOL P4-DG-05; epoch = hyperparameter v1.0.1)",
+ "score": 0.8811385556114284,
+ "per_fold": {
+  "F1": 0.9054218534020523,
+  "F2": 0.8568552578208045
+ },
+ "n_candidates": 10,
+ "overrides": {
+  "model.params.num_leaves": 15,
+  "model.params.learning_rate": 0.03,
+  "model.params.n_estimators": 200,
+  "model.features": "multimodal"
+ },
+ "config": {
+  "family": "tabular",
+  "_source": "Baseline pohon multimodal (LightGBM)",
+  "model": {
+   "kind": "lgbm",
+   "features": "multimodal",
+   "params": {
+    "n_estimators": 200,
+    "num_leaves": 15,
+    "learning_rate": 0.03,
+    "subsample": 0.8,
+    "colsample_bytree": 0.5,
+    "min_child_samples": 30,
+    "reg_lambda": 1.0,
+    "objective": "huber",
+    "huber_alpha": 1.0
+   }
+  }
+ }
+}

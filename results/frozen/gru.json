@@ -1,0 +1,40 @@
+{
+ "model": "gru",
+ "frozen_utc": "2026-10-24T19:38:29+00:00",
+ "selection": "rata-rata relMAE F1–F2, seed 0 (PROTOKOL P4-DG-05; epoch = hyperparameter v1.0.1)",
+ "score": 0.8846967996398527,
+ "per_fold": {
+  "F1": 0.9180877473751073,
+  "F2": 0.851305851904598
+ },
+ "n_candidates": 10,
+ "overrides": {
+  "model.d": 32,
+  "model.dropout": 0.3,
+  "train.lr": 0.0001,
+  "train.L": 250,
+  "train.epochs": 50
+ },
+ "config": {
+  "family": "neural",
+  "_source": "Manogna et al. (2025): 1 GRU 128 unit, dropout 0,2, Dense(1), MSE, Adam, batch 64, 50 epoch, univariat; window 1000 → disesuaikan (L)",
+  "model": {
+   "name": "gru",
+   "d": 32,
+   "layers": 1,
+   "dropout": 0.3,
+   "emb": 8
+  },
+  "train": {
+   "loss": "mse",
+   "lr": 0.0001,
+   "weight_decay": 0.0,
+   "batch": 64,
+   "epochs": 50,
+   "clip": 0.0,
+   "threads": "auto",
+   "shock_weight": 1.0,
+   "L": 250
+  }
+ }
+}

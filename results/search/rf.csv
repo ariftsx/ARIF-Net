@@ -1,0 +1,17 @@
+cand,fold,epochs,relmae,run_id,overrides
+0,F1,,0.92224605405361,20261023-222503_rf_cari00_F1_s0,{}
+1,F1,,0.8942992672793246,20261023-222519_rf_cari01_F1_s0,"{""model.params.max_depth"": null, ""model.params.min_samples_leaf"": 20, ""model.params.max_features"": 0.6}"
+2,F1,,0.9756231526646489,20261023-222532_rf_cari02_F1_s0,"{""model.params.max_depth"": null, ""model.params.min_samples_leaf"": 1, ""model.params.max_features"": 0.3}"
+3,F1,,0.9665202354417262,20261023-222554_rf_cari03_F1_s0,"{""model.params.max_depth"": null, ""model.params.min_samples_leaf"": 1, ""model.params.max_features"": 0.6}"
+4,F1,,0.970605601638856,20261023-222615_rf_cari04_F1_s0,"{""model.params.max_depth"": 16, ""model.params.min_samples_leaf"": 1, ""model.params.max_features"": 0.6}"
+5,F1,,0.8829692644066462,20261023-222622_rf_cari05_F1_s0,"{""model.params.max_depth"": null, ""model.params.min_samples_leaf"": 20, ""model.params.max_features"": 0.3}"
+6,F1,,0.8861452259181554,20261023-222636_rf_cari06_F1_s0,"{""model.params.max_depth"": 8, ""model.params.min_samples_leaf"": 20, ""model.params.max_features"": 0.6}"
+7,F1,,0.9415684858924365,20261023-222649_rf_cari07_F1_s0,"{""model.params.max_depth"": 8, ""model.params.min_samples_leaf"": 1, ""model.params.max_features"": 0.6}"
+0,F2,,0.8825587772576484,20261023-222706_rf_cari00_F2_s0,{}
+1,F2,,0.8923669594636235,20261023-222729_rf_cari01_F2_s0,"{""model.params.max_depth"": null, ""model.params.min_samples_leaf"": 20, ""model.params.max_features"": 0.6}"
+2,F2,,0.8688363170148767,20261023-222746_rf_cari02_F2_s0,"{""model.params.max_depth"": null, ""model.params.min_samples_leaf"": 1, ""model.params.max_features"": 0.3}"
+3,F2,,0.8806136156506775,20261023-222818_rf_cari03_F2_s0,"{""model.params.max_depth"": null, ""model.params.min_samples_leaf"": 1, ""model.params.max_features"": 0.6}"
+4,F2,,0.8817105944537633,20261023-222849_rf_cari04_F2_s0,"{""model.params.max_depth"": 16, ""model.params.min_samples_leaf"": 1, ""model.params.max_features"": 0.6}"
+5,F2,,0.8680594667022709,20261023-222900_rf_cari05_F2_s0,"{""model.params.max_depth"": null, ""model.params.min_samples_leaf"": 20, ""model.params.max_features"": 0.3}"
+6,F2,,0.8859245700826521,20261023-222918_rf_cari06_F2_s0,"{""model.params.max_depth"": 8, ""model.params.min_samples_leaf"": 20, ""model.params.max_features"": 0.6}"
+7,F2,,0.8871250071596841,20261023-222936_rf_cari07_F2_s0,"{""model.params.max_depth"": 8, ""model.params.min_samples_leaf"": 1, ""model.params.max_features"": 0.6}"

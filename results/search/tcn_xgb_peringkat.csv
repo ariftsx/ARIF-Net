@@ -1,0 +1,9 @@
+cand,overrides,F1,F2,skor
+3,"{""stage1.train.epochs"": 10, ""stage2.params.max_depth"": 4, ""stage2.features"": ""embedding""}",1.2302145524710297,0.9916038721909914,1.1109092123310105
+4,"{""stage1.train.epochs"": 5, ""stage2.params.max_depth"": 10, ""stage2.features"": ""multimodal""}",1.019773476282126,1.2084789802154614,1.1141262282487938
+6,"{""stage1.train.epochs"": 50, ""stage2.params.max_depth"": 6, ""stage2.features"": ""embedding""}",1.2372242106722229,1.0611875918379063,1.1492059012550646
+7,"{""stage1.train.epochs"": 5, ""stage2.params.max_depth"": 6, ""stage2.features"": ""embedding""}",1.2693623544696617,1.030119383035442,1.1497408687525519
+2,"{""stage1.train.epochs"": 10, ""stage2.params.max_depth"": 10, ""stage2.features"": ""multimodal""}",1.1205280180140054,1.210209851211184,1.1653689346125948
+5,"{""stage1.train.epochs"": 50, ""stage2.params.max_depth"": 10, ""stage2.features"": ""embedding""}",1.3011979132012952,1.0735150527374042,1.1873564829693497
+0,{},1.3304711464629804,1.0505007133686466,1.1904859299158135
+1,"{""stage1.train.epochs"": 5, ""stage2.params.max_depth"": 10, ""stage2.features"": ""embedding""}",1.343046268515937,1.0711560679899261,1.2071011682529316
