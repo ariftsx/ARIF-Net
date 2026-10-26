@@ -1,4 +1,4 @@
-﻿"""
+"""
 ARIF-Net -- Collector Berita dari 3 Media (Kompas, Detik, CNN Indonesia).
 
 PERUBAHAN dari project lama:
@@ -27,6 +27,7 @@ import logging
 import re
 import sys
 import time
+from collections import defaultdict
 from datetime import date, datetime
 from pathlib import Path
 
@@ -199,6 +200,55 @@ def extract_article_time(html: bytes) -> tuple[datetime | None, str]:
 
 
 # ──────────────────────────────────────── Tahap 1: Index Collection
+def load_index_checkpoint(news_cfg: dict) -> tuple[set[tuple[str, str, str]], dict[tuple[str, str, str], int]]:
+    """Membaca MANIFEST_INDEX untuk resume otomatis:
+    - completed_dates: set((source, index, date)) yang sudah tuntas
+    - partial_dates: dict((source, index, date), last_page) untuk tanggal yang terpotong di tengah jalan
+    """
+    completed_dates: set[tuple[str, str, str]] = set()
+    partial_dates: dict[tuple[str, str, str], int] = {}
+    if not MANIFEST_INDEX.exists():
+        return completed_dates, partial_dates
+
+    sources_order = list(news_cfg.get("sources", {}).keys())
+    dates_by_src_idx = defaultdict(set)
+    pages_by_key = defaultdict(list)
+
+    with MANIFEST_INDEX.open(encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            src, idx, d = row.get("source", ""), row.get("index", ""), row.get("date", "")
+            if not (src and idx and d):
+                continue
+            try:
+                p = int(row.get("page", 0))
+                n = int(row.get("n_items", 0))
+            except ValueError:
+                continue
+            dates_by_src_idx[(src, idx)].add(d)
+            pages_by_key[(src, idx, d)].append((p, n))
+
+    active_src = None
+    for s in reversed(sources_order):
+        if any(k[0] == s for k in dates_by_src_idx):
+            active_src = s
+            break
+
+    for (src, idx), d_set in dates_by_src_idx.items():
+        is_finished_source = (active_src and src in sources_order and active_src in sources_order
+                              and sources_order.index(src) < sources_order.index(active_src))
+        max_d = max(d_set)
+        per_page = news_cfg.get("sources", {}).get(src, {}).get("per_page", 10)
+        for d in d_set:
+            pgs = sorted(pages_by_key[(src, idx, d)], key=lambda x: x[0])
+            last_p, last_n = pgs[-1]
+            if is_finished_source or d < max_d or last_n < per_page:
+                completed_dates.add((src, idx, d))
+            else:
+                partial_dates[(src, idx, d)] = last_p
+
+    return completed_dates, partial_dates
+
+
 def cmd_index(args) -> int:
     """Scrape halaman indeks per (media, tanggal) -- daftar URL + judul."""
     setup_logging("news_index", LOGS)
@@ -220,16 +270,31 @@ def cmd_index(args) -> int:
     http = HTTPClient(delay=news_cfg["delay_seconds"], retries=news_cfg["retries"],
                       timeout=news_cfg["timeout_seconds"])
 
+    completed_dates, partial_dates = (set(), {}) if getattr(args, "redo", False) else load_index_checkpoint(news_cfg)
+    if completed_dates or partial_dates:
+        logging.info("Auto-resume aktif: %d tanggal sudah selesai, %d tanggal parsial terdeteksi.",
+                     len(completed_dates), len(partial_dates))
+
     n_total = n_relevant = 0
     for source in sources:
         scfg = news_cfg["sources"][source]
         parser = INDEX_PARSERS[source]
         for idx in scfg["indexes"]:
             for d in dates:
+                d_str = d.isoformat()
+                key = (source, idx["name"], d_str)
+                if key in completed_dates:
+                    continue
+
                 if deadline and time.time() > deadline:
                     logging.info("Batas waktu tercapai, berhenti.")
                     return 0
-                page = 1
+
+                page = partial_dates.get(key, 0) + 1
+                if page > 1:
+                    logging.info("%s %s %s: Melanjutkan dari page %d (page 1-%d sudah ada)",
+                                 source, idx["name"], d_str, page, page - 1)
+
                 while page <= news_cfg["max_pages_per_day"]:
                     url = build_index_url(idx["url"], d, page, scfg["per_page"])
                     r = http.get(url, label=f"{source}/{idx['name']}/{d}/p{page}")
@@ -485,6 +550,7 @@ def main() -> int:
     p.add_argument("--start", default=None)
     p.add_argument("--end", default=None)
     p.add_argument("--max-minutes", type=float, default=None)
+    p.add_argument("--redo", action="store_true", help="Ulangi scraping dari awal (abaikan progress)")
 
     p = sub.add_parser("articles", help="Tahap 2: Scrape isi berita relevan")
     p.add_argument("--max-minutes", type=float, default=None)

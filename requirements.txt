@@ -23,12 +23,12 @@ lightgbm>=4.5
 torch>=2.4
 
 # Optional: NLP Sentiment (uncomment jika ingin model sentiment)
-# transformers>=4.40
-# tokenizers>=0.15
+transformers>=4.40
+tokenizers>=0.15
 
 # Data Export
 pyarrow>=17.0
 
 # Visualization (opsional)
-# matplotlib>=3.9
-# seaborn>=0.13
+matplotlib>=3.9
+seaborn>=0.13
