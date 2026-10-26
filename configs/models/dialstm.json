@@ -1,20 +1,22 @@
 {
+  "family": "neural",
+  "_source": "Gu et al. (2022) Tabel 2: LSTM 6 unit (tanh), dropout 0,2, FC 10 → FC 1, Adam 1e-3, MSE, time step T=6 (grid {1,2,4,6,8,12}); input harga + iklim",
   "model": {
-    "type": "neural",
     "name": "dialstm",
-    "d": 32,
-    "dropout": 0.1,
+    "units": 6,
+    "fc": 10,
+    "dropout": 0.2,
     "emb": 8
   },
   "train": {
-    "steps": 320,
-    "batch": 256,
+    "loss": "mse",
     "lr": 0.001,
-    "weight_decay": 0.01,
-    "huber_delta": 1.0,
-    "clip": 1.0,
-    "threads": 2,
-    "shock_weight": 2.0
-  },
-  "description": "DIA-LSTM — Gu et al. (2022): input attention + temporal attention"
+    "weight_decay": 0.0,
+    "batch": 64,
+    "epochs": 50,
+    "clip": 0.0,
+    "threads": "auto",
+    "shock_weight": 1.0,
+    "L": 6
+  }
 }

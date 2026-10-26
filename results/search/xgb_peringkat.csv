@@ -1,0 +1,11 @@
+cand,overrides,F1,F2,skor
+0,{},1.041675221867061,0.8883450512777133,0.9650101365723872
+8,"{""model.params.max_depth"": 10, ""model.params.learning_rate"": 0.05, ""model.params.n_estimators"": 200, ""model.params.objective"": ""reg:pseudohubererror""}",1.0523855861673164,0.8803035567348876,0.966344571451102
+2,"{""model.params.max_depth"": 6, ""model.params.learning_rate"": 0.05, ""model.params.n_estimators"": 200, ""model.params.objective"": ""reg:pseudohubererror""}",1.1058459484538914,0.8614572456100079,0.9836515970319497
+1,"{""model.params.max_depth"": 3, ""model.params.learning_rate"": 0.03, ""model.params.n_estimators"": 200, ""model.params.objective"": ""reg:squarederror""}",1.0010902926721643,0.9816112749410966,0.9913507838066304
+9,"{""model.params.max_depth"": 4, ""model.params.learning_rate"": 0.03, ""model.params.n_estimators"": 200, ""model.params.objective"": ""reg:squarederror""}",0.9953840911599761,1.0010402657214368,0.9982121784407064
+7,"{""model.params.max_depth"": 6, ""model.params.learning_rate"": 0.03, ""model.params.n_estimators"": 400, ""model.params.objective"": ""reg:pseudohubererror""}",1.1245067358334364,0.8883278932129922,1.0064173145232143
+3,"{""model.params.max_depth"": 4, ""model.params.learning_rate"": 0.05, ""model.params.n_estimators"": 400, ""model.params.objective"": ""reg:pseudohubererror""}",1.1429854239279376,0.9257893803773747,1.0343874021526562
+4,"{""model.params.max_depth"": 6, ""model.params.learning_rate"": 0.03, ""model.params.n_estimators"": 200, ""model.params.objective"": ""reg:squarederror""}",1.0859393981513767,1.0307295594940826,1.0583344788227298
+5,"{""model.params.max_depth"": 3, ""model.params.learning_rate"": 0.05, ""model.params.n_estimators"": 800, ""model.params.objective"": ""reg:pseudohubererror""}",1.2852073128012598,0.94092054256105,1.113063927681155
+6,"{""model.params.max_depth"": 6, ""model.params.learning_rate"": 0.05, ""model.params.n_estimators"": 400, ""model.params.objective"": ""reg:squarederror""}",1.2075575934309384,1.0323868877739875,1.119972240602463

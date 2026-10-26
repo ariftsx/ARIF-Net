@@ -1,0 +1,24 @@
+{
+  "_doc": "Kandidat 0 = default paper (configs/models); lalu sampel acak grid, maks budget (search.py).",
+  "budget": 10,
+  "space": {
+    "model.params.num_leaves": [
+      7,
+      15,
+      31
+    ],
+    "model.params.learning_rate": [
+      0.03,
+      0.1
+    ],
+    "model.params.n_estimators": [
+      200,
+      400,
+      800
+    ],
+    "model.features": [
+      "multimodal",
+      "harga"
+    ]
+  }
+}

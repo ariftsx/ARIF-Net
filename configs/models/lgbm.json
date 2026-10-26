@@ -1,6 +1,7 @@
 {
+  "family": "tabular",
+  "_source": "Baseline pohon multimodal (LightGBM)",
   "model": {
-    "type": "tabular",
     "kind": "lgbm",
     "features": "multimodal",
     "params": {
@@ -11,8 +12,8 @@
       "colsample_bytree": 0.5,
       "min_child_samples": 30,
       "reg_lambda": 1.0,
+      "objective": "huber",
       "huber_alpha": 1.0
     }
-  },
-  "description": "LightGBM multimodal — Huber loss"
+  }
 }

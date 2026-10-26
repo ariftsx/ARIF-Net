@@ -1,21 +1,22 @@
 {
+  "family": "neural",
+  "_source": "Manogna et al. (2025): 1 LSTM 128 unit, dropout 0,2, Dense(1), MSE, Adam, batch 64, 50 epoch, univariat; window 1000 → disesuaikan (L)",
   "model": {
-    "type": "neural",
     "name": "lstm",
-    "d": 32,
+    "d": 128,
     "layers": 1,
-    "dropout": 0.1,
+    "dropout": 0.2,
     "emb": 8
   },
   "train": {
-    "steps": 320,
-    "batch": 256,
+    "loss": "mse",
     "lr": 0.001,
-    "weight_decay": 0.01,
-    "huber_delta": 1.0,
-    "clip": 1.0,
-    "threads": 2,
-    "shock_weight": 2.0
-  },
-  "description": "LSTM univariat — Manogna et al. (2025)"
+    "weight_decay": 0.0,
+    "batch": 64,
+    "epochs": 50,
+    "clip": 0.0,
+    "threads": "auto",
+    "shock_weight": 1.0,
+    "L": 250
+  }
 }

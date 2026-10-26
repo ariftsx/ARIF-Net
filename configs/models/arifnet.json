@@ -1,0 +1,29 @@
+{
+  "family": "arifnet",
+  "_source": "docs/ARIFNET_SPEC.md v1.0.0 §2 (A0: encoder GRU + hurdle G-1 + kuantil G-2 + drift G-3; harga + kalender)",
+  "model": {
+    "name": "arifnet",
+    "encoder": "gru",
+    "d": 64,
+    "dropout": 0.2,
+    "emb": 8,
+    "hurdle": true,
+    "quantile": true,
+    "drift": true,
+    "point_loss": null,
+    "modalities": [],
+    "drift_window": 365,
+    "drift_alpha": 0.5
+  },
+  "train": {
+    "L": 60,
+    "lr": 0.001,
+    "weight_decay": 0.0,
+    "batch": 64,
+    "epochs": 50,
+    "clip": 1.0,
+    "threads": "auto",
+    "shock_weight": 2.0,
+    "event_weight": 1.0
+  }
+}

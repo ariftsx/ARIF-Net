@@ -1,0 +1,11 @@
+cand,overrides,F1,F2,skor
+4,"{""model.params.C"": 0.1, ""model.params.epsilon"": 0.01, ""model.features"": ""harga""}",0.8827250598566956,0.9111858918892665,0.896955475872981
+1,"{""model.params.C"": 0.1, ""model.params.epsilon"": 0.3, ""model.features"": ""harga""}",0.8805741336309362,0.9265374664673574,0.9035558000491468
+3,"{""model.params.C"": 0.1, ""model.params.epsilon"": 0.01, ""model.features"": ""multimodal""}",0.9656681645560043,0.9531291460430992,0.9593986552995517
+6,"{""model.params.C"": 0.1, ""model.params.epsilon"": 0.3, ""model.features"": ""multimodal""}",0.9857439759440988,0.9412897074306146,0.9635168416873567
+2,"{""model.params.C"": 0.1, ""model.params.epsilon"": 0.1, ""model.features"": ""multimodal""}",0.9765810894393233,0.9542685229212211,0.9654248061802722
+8,"{""model.params.C"": 1.0, ""model.params.epsilon"": 0.01, ""model.features"": ""harga""}",1.0047730265220625,1.0019488710626394,1.003360948792351
+7,"{""model.params.C"": 1.0, ""model.params.epsilon"": 0.3, ""model.features"": ""harga""}",1.036655717136135,0.9894195430955066,1.0130376301158208
+0,{},1.062412541191641,0.9646717435162636,1.0135421423539523
+9,"{""model.params.C"": 10.0, ""model.params.epsilon"": 0.3, ""model.features"": ""multimodal""}",1.1678557218292336,0.9597465654440861,1.06380114363666
+5,"{""model.params.C"": 10.0, ""model.params.epsilon"": 0.01, ""model.features"": ""harga""}",1.276866886658617,1.0552613290566943,1.1660641078576557

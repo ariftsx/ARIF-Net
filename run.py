@@ -1,13 +1,14 @@
-﻿r"""
+r"""
 ARIF-Net -- SATU PINTU MASUK seluruh pipeline.
 
     python run.py status                  ringkasan tahap mana yang sudah/belum
     python run.py collect   [--step ...]  tahap 1: collection semua data
     python run.py preprocess              tahap 2: preprocessing & build dataset
-    python run.py train --model <nama>    tahap 3: latih model baseline
-    python run.py train --model all       tahap 3: latih SEMUA model baseline
-    python run.py evaluate                tahap 3: evaluasi & perbandingan
-    python run.py analyze                 tahap 3: gap analysis -> rekomendasi ARIF-Net
+    python run.py train search   --model all    tahap 3a: cari konfigurasi (default paper + grid), F1-F2, bekukan
+    python run.py train validate --model all    tahap 3b: konfigurasi beku x F1-F2 x 5 seed
+    python run.py train test     --model all    tahap 3c: latih final -> test SEKALI (--dry-run = gladi di F2)
+    python run.py train run --model gru --fold F1   uji coba satu model
+    python run.py analyze [--source test]       tahap 4: gap analysis -> rekomendasi ARIF-Net
     python run.py full                    jalankan semua tahap secara berurutan
 
 Jalankan dari root repo:
@@ -126,15 +127,22 @@ def cmd_preprocess(args) -> int:
 
 # ──────────────────────────────────── TRAIN
 def cmd_train(args) -> int:
-    cmd = PY + ["-m", "03_training.training", "--model", args.model,
+    cmd = PY + ["-m", "03_training.training", args.action, "--model", args.model,
                 "--fold", args.fold, "--seed", str(args.seed)]
-    r = step(f"Train {args.model} / {args.fold}", cmd)
-    return 0 if r["ok"] else 1
+    if args.dry_run:
+        cmd.append("--dry-run")
+    if args.set:
+        cmd += ["--set", *args.set]
+    print(f"\n> Train {args.action} {args.model}")
+    t = time.time()
+    rc = subprocess.run(cmd, cwd=ROOT).returncode          # log tampil langsung (proses panjang)
+    print(f"  {'LULUS' if rc == 0 else 'GAGAL'} ({time.time() - t:.0f}s)")
+    return rc
 
 
 # ──────────────────────────────────── ANALYZE (GAP ANALYSIS)
 def cmd_analyze(args) -> int:
-    r = step("Gap Analysis", PY + ["-m", "03_training.analyze_gaps"])
+    r = step("Gap Analysis", PY + ["-m", "03_training.analyze_gaps", "--source", args.source])
     if r["ok"]:
         report = ROOT / "results" / "gap_analysis" / "gap_analysis_report.md"
         if report.exists():
@@ -186,13 +194,9 @@ def cmd_full(args) -> int:
     print("TAHAP 3: TRAINING BASELINE MODELS")
     print("=" * 60)
 
-    tabular_models = ["persistence", "ridge", "svr", "rf", "xgb", "lgbm"]
-    steps_3 = []
-    for model in tabular_models:
-        for fold in ["F1", "F2", "F3"]:
-            steps_3.append(step(f"Train {model}/{fold}",
-                               PY + ["-m", "03_training.training",
-                                     "--model", model, "--fold", fold]))
+    # Pencarian + validasi semua model (lama; test sengaja TIDAK dijalankan otomatis -- sekali buka, manual)
+    steps_3 = [step(f"Train {a}", PY + ["-m", "03_training.training", a, "--model", "all"])
+               for a in ("search", "validate")]
 
     # Gap Analysis
     print("\n" + "=" * 60)
@@ -228,14 +232,18 @@ def main() -> int:
 
     sub.add_parser("preprocess", help="Tahap 2: Preprocessing").set_defaults(f=cmd_preprocess)
 
-    p = sub.add_parser("train", help="Tahap 3: Latih model")
-    p.add_argument("--model", required=True,
-                   help="Nama model atau 'all'")
-    p.add_argument("--fold", default="all", choices=["F1", "F2", "F3", "all"])
+    p = sub.add_parser("train", help="Tahap 3: search / validate / test / run")
+    p.add_argument("action", choices=["search", "validate", "test", "run", "ablate", "register", "prospective"])
+    p.add_argument("--model", required=True, help="Nama model, dipisah koma, atau 'all'")
+    p.add_argument("--fold", default="F1", choices=["F1", "F2"], help="untuk `run`")
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--set", nargs="*", help="override config untuk `run`, mis. train.epochs=5")
+    p.add_argument("--dry-run", action="store_true", help="`test`: gladi resik di F2")
     p.set_defaults(f=cmd_train)
 
-    sub.add_parser("analyze", help="Gap analysis -> rekomendasi ARIF-Net").set_defaults(f=cmd_analyze)
+    p = sub.add_parser("analyze", help="Gap analysis -> rekomendasi ARIF-Net")
+    p.add_argument("--source", choices=["validation", "test"], default="validation")
+    p.set_defaults(f=cmd_analyze)
     sub.add_parser("full", help="Jalankan seluruh pipeline").set_defaults(f=cmd_full)
 
     args = ap.parse_args()

@@ -1,0 +1,30 @@
+{
+ "model": "xgb",
+ "frozen_utc": "2026-10-23T15:30:51+00:00",
+ "selection": "rata-rata relMAE F1–F2, seed 0 (PROTOKOL P4-DG-05; epoch = hyperparameter v1.0.1)",
+ "score": 0.9650101365723872,
+ "per_fold": {
+  "F1": 1.041675221867061,
+  "F2": 0.8883450512777133
+ },
+ "n_candidates": 10,
+ "overrides": {},
+ "config": {
+  "family": "tabular",
+  "_source": "Baseline pohon multimodal (XGBoost)",
+  "model": {
+   "kind": "xgb",
+   "features": "multimodal",
+   "params": {
+    "n_estimators": 400,
+    "max_depth": 4,
+    "learning_rate": 0.03,
+    "subsample": 0.8,
+    "colsample_bytree": 0.5,
+    "min_child_weight": 5,
+    "reg_lambda": 1.0,
+    "objective": "reg:pseudohubererror"
+   }
+  }
+ }
+}

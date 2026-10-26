@@ -1,4 +1,4 @@
-﻿"""
+"""
 ARIF-Net -- Build fitur multimodal & gabungkan ke dataset final siap model.
 
 Menggabungkan semua preprocessed data:
@@ -34,36 +34,85 @@ from .utils import (
 
 
 def build_price_features(prices: pd.DataFrame) -> pd.DataFrame:
-    """Bangun fitur teknikal dari riwayat harga per komoditas."""
+    """Fitur harga BEBAS SKALA dari riwayat harga per komoditas (hanya data <= t; jendela = observasi terlapor).
+
+    Level harga mentah (lag/MA dalam Rp) sengaja tidak dipakai: tidak stasioner, sehingga model linear/neural
+    mengekstrapolasi saat harga pindah ke level baru (mis. beras 2023-2024). Satu fitur level tetap ada:
+    price_level = log harga (PRICE_FEATURE_CONTRACT lama: ret_k, statistik bergulir relatif, price_level).
+    """
+    p = prices["price"].astype(float)
     features = prices[["date", "price"]].copy()
+    features["price_level"] = np.log(p)
 
-    # Lag features
+    # Return k observasi (setara lag harga, tapi relatif)
     for lag in [1, 2, 3, 5, 7, 14, 21, 30]:
-        features[f"price_lag_{lag}"] = features["price"].shift(lag)
+        features[f"return_{lag}d"] = p.pct_change(lag, fill_method=None)
 
-    # Return features
-    for lag in [1, 3, 7, 14, 30]:
-        features[f"return_{lag}d"] = features["price"].pct_change(lag)
-
-    # Moving averages
+    # Posisi terhadap rata-rata bergulir & dispersi relatif (CV)
     for window in [5, 10, 20, 30, 60, 90]:
-        features[f"price_ma_{window}"] = features["price"].rolling(window, min_periods=1).mean()
-        features[f"price_std_{window}"] = features["price"].rolling(window, min_periods=1).std()
+        ma = p.rolling(window, min_periods=1).mean()
+        features[f"price_ratio_ma_{window}"] = p / ma - 1
+        features[f"price_cv_{window}"] = p.rolling(window, min_periods=2).std() / ma
 
-    # Ratio to MA
-    for window in [5, 20, 60]:
-        ma_col = f"price_ma_{window}"
-        features[f"price_ratio_ma_{window}"] = features["price"] / features[ma_col].replace(0, np.nan)
-
-    # Volatilitas (std of returns)
+    # Volatilitas (std return harian)
     for window in [5, 20]:
-        features[f"volatility_{window}d"] = features["return_1d"].rolling(window, min_periods=1).std()
+        features[f"volatility_{window}d"] = features["return_1d"].rolling(window, min_periods=2).std()
 
-    # Momentum
-    features["momentum_7d"] = features["price"] - features["price"].shift(7)
-    features["momentum_30d"] = features["price"] - features["price"].shift(30)
+    # Level mentah (Rp): informatif untuk model pohon (tidak mengekstrapolasi); untuk model linear/neural
+    # distandardisasi lalu dipotong ±5σ di 03_training/data.py.
+    for lag in [1, 7, 30]:
+        features[f"price_lag_{lag}"] = p.shift(lag)
+    for window in [5, 20, 60]:
+        features[f"price_ma_{window}"] = p.rolling(window, min_periods=1).mean()
 
     return features
+
+
+DRIFT_WINDOWS = (365, 730)
+DRIFT_SEASON_YEARS = 3
+DRIFT_MIN_OBS = 20
+
+
+def build_drift_features(prices: pd.DataFrame, origins: np.ndarray, horizons: np.ndarray) -> pd.DataFrame:
+    """Fitur drift ARIF-Net (docs/ARIFNET_SPEC.md §2.4, G-3), HANYA dari harga <= t.
+
+    drift_slope_W  : kemiringan Theil–Sen log-harga per hari atas observasi di (t − W, t]  (dikali h di model)
+    drift_season   : rata-rata k=1..K [log P(t − 365k + h) − log P(t − 365k)], P = observasi terakhir <= tanggal itu;
+                     karena h <= 365, kedua tanggal <= t (tanpa kebocoran)
+    """
+    from scipy.stats import theilslopes
+    d = prices["date"].to_numpy("datetime64[D]")
+    lp = np.log(prices["price"].to_numpy(float))
+    day = d.astype("int64")
+
+    slopes = {}
+    for t in np.unique(origins):
+        i = int(np.searchsorted(d, t, side="right"))
+        row = {}
+        for W in DRIFT_WINDOWS:
+            j = int(np.searchsorted(d, t - np.timedelta64(W, "D"), side="right"))
+            row[f"drift_slope_{W}"] = (theilslopes(lp[j:i], day[j:i])[0] if i - j >= DRIFT_MIN_OBS else np.nan)
+        slopes[t] = row
+
+    def asof(dates: np.ndarray) -> np.ndarray:
+        k = np.searchsorted(d, dates, side="right") - 1
+        return np.where(k >= 0, lp[np.maximum(k, 0)], np.nan)
+
+    seas = np.full(len(origins), np.nan)
+    acc, n = np.zeros(len(origins)), np.zeros(len(origins))
+    for k in range(1, DRIFT_SEASON_YEARS + 1):
+        base = origins - np.timedelta64(365 * k, "D")
+        v = asof(base + horizons.astype("timedelta64[D]")) - asof(base)
+        ok = np.isfinite(v) & (base >= d[0])
+        acc[ok] += v[ok]
+        n[ok] += 1
+    seas[n > 0] = acc[n > 0] / n[n > 0]
+
+    out = pd.DataFrame([slopes[t] for t in origins])
+    out.insert(0, "origin_date", origins)
+    out.insert(1, "h", horizons)
+    out["drift_season"] = seas
+    return out
 
 
 def merge_features(target: pd.DataFrame, cfg: dict) -> pd.DataFrame:
@@ -72,25 +121,28 @@ def merge_features(target: pd.DataFrame, cfg: dict) -> pd.DataFrame:
     df["origin_date"] = pd.to_datetime(df["origin_date"])
 
     # ── 1. Price features ──
-    for cid in COMMODITIES:
+    # Merge per komoditas lalu concat. Jangan assign balik via df.loc[mask]:
+    # merge() mereset index (baris tidak sejajar -> NaN) dan kolom baru dibuang.
+    parts = []
+    for cid, part in df.groupby("comcat_id", sort=False):
         prices_path = DATA_PROCESSED / "pihps" / f"prices_{cid}.csv"
-        if not prices_path.exists():
-            continue
-        prices = pd.read_csv(prices_path, parse_dates=["date"])
-        pfeat = build_price_features(prices)
-        pfeat_cols = [c for c in pfeat.columns if c not in ("date", "price")]
-        pfeat = pfeat.rename(columns={"date": "origin_date"})
-        mask = df["comcat_id"] == cid
-        df.loc[mask] = df.loc[mask].merge(pfeat[["origin_date"] + pfeat_cols],
-                                           on="origin_date", how="left", suffixes=("", "_dup"))
-        # Drop duplicate columns
-        dup_cols = [c for c in df.columns if c.endswith("_dup")]
-        df.drop(columns=dup_cols, inplace=True, errors="ignore")
+        if cid in COMMODITIES and prices_path.exists():
+            prices = pd.read_csv(prices_path, parse_dates=["date"])
+            pfeat = build_price_features(prices)
+            pfeat_cols = [c for c in pfeat.columns if c not in ("date", "price")]
+            pfeat = pfeat.rename(columns={"date": "origin_date"})
+            part = part.merge(pfeat[["origin_date"] + pfeat_cols],
+                              on="origin_date", how="left", validate="many_to_one")
+        parts.append(part)
+    df = pd.concat(parts, ignore_index=True)
 
     # ── 2. Climate features ──
     climate_path = DATA_PROCESSED / "climate" / "climate_tier1_mean.csv"
     if climate_path.exists():
         climate = pd.read_csv(climate_path, parse_dates=["date"])
+        # Data Contract §6 (P1-DG-17): iklim tersedia dengan jeda rilis, origin t memakai data <= t - lag.
+        lag = int(cfg["availability"]["climate_lag_days"])
+        climate["date"] = climate["date"] + pd.Timedelta(days=lag)
         climate = climate.rename(columns={"date": "origin_date"})
         clim_cols = [c for c in climate.columns if c != "origin_date"]
         clim_renamed = {c: f"clim_{c}" for c in clim_cols}
@@ -112,13 +164,22 @@ def merge_features(target: pd.DataFrame, cfg: dict) -> pd.DataFrame:
     # ── 4. BBM features ──
     bbm_path = DATA_PROCESSED.parent / "raw" / "bbm" / "bbm_prices.csv"
     if bbm_path.exists():
-        bbm = pd.read_csv(bbm_path, parse_dates=["date"])
-        bbm = bbm.rename(columns={"date": "origin_date"})
-        bbm_cols = [c for c in bbm.columns if c not in ("origin_date", "effective_date")]
-        bbm_renamed = {c: f"bbm_{c}" for c in bbm_cols}
-        bbm = bbm[["origin_date"] + bbm_cols].rename(columns=bbm_renamed)
-        df = df.merge(bbm, on="origin_date", how="left")
-        df[list(bbm_renamed.values())] = df[list(bbm_renamed.values())].ffill()
+        # Harga BBM diatur pemerintah (fungsi tangga): level mentah hampir konstan di data latih lalu melompat,
+        # sehingga dipakai bentuk relatif: perubahan log 30/365 hari dan lama sejak penyesuaian terakhir.
+        bbm = pd.read_csv(bbm_path, parse_dates=["date"]).sort_values("date").set_index("date")
+        bbm = bbm.asfreq("D").ffill()
+        fuels = [c for c in bbm.columns if c != "effective_date"]
+        feats = pd.DataFrame(index=bbm.index)
+        for f in fuels:
+            name = f.removesuffix("_rp")
+            lv = np.log(bbm[f].astype(float))
+            feats[f"bbm_{name}_chg_30d"] = lv - lv.shift(30)
+            feats[f"bbm_{name}_chg_365d"] = lv - lv.shift(365)
+            changed = lv.diff().fillna(0) != 0
+            run_id = changed.cumsum()
+            feats[f"bbm_{name}_days_since_change"] = (run_id.groupby(run_id).cumcount() / 365.0).to_numpy()
+        feats = feats.reset_index().rename(columns={"date": "origin_date"})
+        df = df.merge(feats, on="origin_date", how="left")
 
     # ── 5. Calendar features ──
     cal_path = DATA_PROCESSED.parent / "raw" / "calendar" / "calendar.csv"
@@ -129,8 +190,24 @@ def merge_features(target: pd.DataFrame, cfg: dict) -> pd.DataFrame:
         cal_renamed = {c: f"cal_{c}" for c in cal_cols}
         cal = cal[["origin_date"] + cal_cols].rename(columns=cal_renamed)
         df = df.merge(cal, on="origin_date", how="left")
+        # Kalender pada tanggal target t+h: diketahui sebelumnya (known future input, dipakai TFT).
+        fut = cal.rename(columns={"origin_date": "target_date_nominal",
+                                  **{v: f"tgt_{v}" for v in cal_renamed.values()}})
+        df["target_date_nominal"] = pd.to_datetime(df["target_date_nominal"])
+        df = df.merge(fut, on="target_date_nominal", how="left")
 
-    # ── 6. Horizon features ──
+    # ── 6. Drift features (ARIF-Net G-3; tidak masuk set fitur baseline) ──
+    parts = []
+    for cid, part in df.groupby("comcat_id", sort=False):
+        prices = pd.read_csv(DATA_PROCESSED / "pihps" / f"prices_{cid}.csv", parse_dates=["date"])
+        drift = build_drift_features(prices, part["origin_date"].to_numpy("datetime64[D]"),
+                                     part["h"].to_numpy(int))
+        drift["origin_date"] = pd.to_datetime(drift["origin_date"])
+        parts.append(part.merge(drift.drop_duplicates(["origin_date", "h"]), on=["origin_date", "h"],
+                                how="left", validate="many_to_one"))
+    df = pd.concat(parts, ignore_index=True)
+
+    # ── 7. Horizon features ──
     df["h_log"] = np.log(df["h"])
     for hi, hval in enumerate(HORIZONS):
         df[f"h_is_{hval}"] = (df["h"] == hval).astype(int)
@@ -139,22 +216,35 @@ def merge_features(target: pd.DataFrame, cfg: dict) -> pd.DataFrame:
 
 
 def split_data(df: pd.DataFrame, cfg: dict) -> dict[str, pd.DataFrame]:
-    """Split kronologis berdasarkan fold boundaries."""
-    boundaries = cfg["validation"]["fold_boundaries"]
+    """Split kronologis rolling-origin dengan purging label.
+
+    Fold k: train = origin < b_k DAN label < b_k; val = b_k <= origin < b_{k+1} DAN label < test_start.
+    Final: train = origin < test_start DAN label < test_start; test = origin >= test_start, label <= test_end.
+    Purging memastikan tidak ada label train yang melihat periode val, dan label val tidak masuk periode test.
+    """
+    v = cfg["validation"]
+    folds = list(v["folds"])
+    bounds = [pd.Timestamp(v["fold_boundaries"][f]) for f in folds]
+    test_start, test_end = pd.Timestamp(v["test_start"]), pd.Timestamp(v["test_end"])
+    origin, label = df["origin_date"], pd.to_datetime(df["label_date"])
     splits = {}
-    for fold in FOLDS:
-        boundary = pd.Timestamp(boundaries[fold])
-        train = df[df["origin_date"] < boundary].copy()
-        val = df[(df["origin_date"] >= boundary)].copy()
-        # For folds before test, val ends at next boundary
-        fold_idx = list(FOLDS).index(fold)
-        if fold_idx < len(FOLDS) - 1:
-            next_boundary = pd.Timestamp(boundaries[FOLDS[fold_idx + 1]])
-            val = val[val["origin_date"] < next_boundary]
-        splits[fold] = {"train": train, "val": val}
-    # Test split
-    test_start = pd.Timestamp(cfg["validation"]["test_start"])
-    splits["test"] = df[df["origin_date"] >= test_start].copy()
+    for i, fold in enumerate(folds):
+        b, b_next = bounds[i], bounds[i + 1] if i + 1 < len(bounds) else test_start
+        splits[fold] = {
+            "train": df[(origin < b) & (label < b)].copy(),
+            "val": df[(origin >= b) & (origin < b_next) & (label < test_start)].copy(),
+        }
+    splits["final"] = {"train": df[(origin < test_start) & (label < test_start)].copy()}
+    splits["test"] = df[(origin >= test_start) & (label <= test_end)].copy()
+
+    # Uji prospektif (docs/PROTOKOL_UJI_PROSPEKTIF.md): latih = origin & label <= train_end; uji = origin >= start,
+    # label <= cutoff. Peran uji hanya terisi setelah data sesudah train_end dikumpulkan.
+    p = cfg["prospective"]
+    p_end, p_start, p_cut = (pd.Timestamp(p[k]) for k in ("train_end", "start", "cutoff"))
+    splits["prospektif"] = {"train": df[(origin <= p_end) & (label <= p_end)].copy()}
+    p_test = df[(origin >= p_start) & (label <= p_cut)].copy()
+    if len(p_test):
+        splits["prospektif"]["test"] = p_test
     return splits
 
 
@@ -178,6 +268,10 @@ def build_feature_registry(df: pd.DataFrame) -> pd.DataFrame:
             group = "BBM"
         elif col.startswith("cal_"):
             group = "CALENDAR"
+        elif col.startswith("tgt_cal_"):
+            group = "CALENDAR_FUTURE"
+        elif col.startswith("drift_"):
+            group = "DRIFT"
         elif col.startswith("h_"):
             group = "HORIZON"
         else:
@@ -242,6 +336,11 @@ def main() -> int:
         "total_rows": len(dataset),
         "total_features": len(dataset.columns),
         "feature_groups": group_counts,
+        "splits": {f"{fold}_{part}" if isinstance(data, dict) else fold: len(d)
+                   for fold, data in splits.items()
+                   for part, d in (data.items() if isinstance(data, dict) else [("", data)])},
+        "split_rule": "rolling-origin + purging label (lihat split_data)",
+        "climate_lag_days": cfg["availability"]["climate_lag_days"],
         "commodities": list(COMMODITIES),
         "horizons": list(HORIZONS),
         "finished_at_utc": now_utc(),

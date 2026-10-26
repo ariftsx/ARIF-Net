@@ -1,0 +1,40 @@
+{
+  "_doc": "SPEC §4: kandidat 0 = A0 default, sampel acak grid sampai budget; top-3 dicek ulang 5 seed (recheck_top).",
+  "budget": 40,
+  "recheck_top": 3,
+  "space": {
+    "model.d": [
+      32,
+      64,
+      128
+    ],
+    "model.dropout": [
+      0.0,
+      0.2,
+      0.3
+    ],
+    "train.lr": [
+      0.0001,
+      0.001
+    ],
+    "train.L": [
+      30,
+      60,
+      120,
+      250
+    ],
+    "train.shock_weight": [
+      1.0,
+      2.0
+    ],
+    "model.drift_window": [
+      365,
+      730
+    ],
+    "model.drift_alpha": [
+      0.0,
+      0.5,
+      1.0
+    ]
+  }
+}

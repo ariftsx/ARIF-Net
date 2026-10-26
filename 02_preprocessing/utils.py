@@ -30,7 +30,7 @@ COMMODITY_NAMES = {
     "com_3": "Beras Kualitas Medium I",
 }
 HORIZONS = (1, 3, 7, 14, 30, 90, 180, 365)
-FOLDS = ("F1", "F2", "F3")
+FOLDS = ("F1", "F2")  # F3 = peran final (configs/project.json validation)
 
 
 def load_json(path: Path) -> Any:

@@ -1,0 +1,25 @@
+{
+  "_doc": "Kandidat 0 = default paper (configs/models); lalu sampel acak grid, maks budget (search.py).",
+  "budget": 10,
+  "space": {
+    "model.d": [
+      32,
+      64,
+      128
+    ],
+    "model.dropout": [
+      0.0,
+      0.2,
+      0.3
+    ],
+    "train.lr": [
+      0.0001,
+      0.001
+    ],
+    "train.L": [
+      30,
+      60,
+      120
+    ]
+  }
+}

@@ -1,4 +1,4 @@
-﻿"""
+"""
 ARIF-Net -- Build target r(t,h) = (P(t+h) − P(t)) / P(t).
 
 Untuk setiap origin (observasi PIHPS), cari label = observasi pertama ≥ t+h,

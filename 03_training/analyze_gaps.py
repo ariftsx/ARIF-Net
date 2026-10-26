@@ -1,4 +1,4 @@
-﻿"""
+"""
 ARIF-Net -- Gap Analysis: Analisis kelemahan model terdahulu -> rekomendasi ARIF-Net.
 
 Membaca hasil evaluasi semua model baseline dan model penelitian terdahulu,
@@ -40,25 +40,28 @@ COMMODITY_NAMES = {
 }
 
 
-def load_all_results() -> pd.DataFrame:
-    """Baca semua hasil training dari results/runs/."""
-    rows = []
-    if not RUNS.exists():
+def load_all_results(source: str = "validation") -> pd.DataFrame:
+    """Metrik per (model, komoditas, horizon) dari konfigurasi BEKU saja.
+
+    validation: run bertag "valid" (F1–F2 × seed) → relMAE dihitung dari gabungan prediksi semua fold & seed.
+    test      : results/test/predictions/<model>.csv (ensembel seed, sesudah uji akhir).
+    Run pencarian (kandidat yang kalah) tidak pernah dibaca.
+    """
+    preds = []
+    if source == "test":
+        for f in sorted((RESULTS / "test" / "predictions").glob("*.csv")):
+            preds.append(pd.read_csv(f).assign(model=f.stem))
+    else:
+        for run_dir in sorted(RUNS.glob("*_valid_*")):
+            meta = json.loads((run_dir / "result.json").read_text(encoding="utf-8"))
+            preds.append(pd.read_csv(run_dir / "predictions.csv").assign(model=meta["model"]))
+    if not preds:
         return pd.DataFrame()
-    for run_dir in sorted(RUNS.iterdir()):
-        result_file = run_dir / "result.json"
-        if not result_file.exists():
-            continue
-        result = json.loads(result_file.read_text(encoding="utf-8"))
-        row = {
-            "model": result.get("model_name", ""),
-            "fold": result.get("fold", ""),
-            "seed": result.get("seed", 0),
-            "train_seconds": result.get("train_seconds", 0),
-        }
-        row.update(result.get("metrics_overall", {}))
-        for ch in result.get("metrics_per_ch", []):
-            rows.append({**row, **ch})
+    df = pd.concat(preds, ignore_index=True)
+    rows = []
+    for (m, c, h), g in df.groupby(["model", "comcat_id", "h"]):
+        rows.append({"model": m, "komoditas": c, "h": int(h),
+                     **basic(g["r"].to_numpy(float), g["r_hat"].to_numpy(float))})
     return pd.DataFrame(rows)
 
 
@@ -124,8 +127,18 @@ def find_gaps(df: pd.DataFrame) -> list[dict]:
 
 def multimodal_vs_price_only(df: pd.DataFrame) -> dict:
     """Bandingkan model multimodal vs hanya harga."""
-    price_models = {"persistence", "arima", "lstm", "gru"}
-    multimodal_models = {"ridge", "svr", "rf", "xgb", "lgbm", "bilstm", "dialstm", "tft"}
+    # Set input mengikuti konfigurasi BEKU (search dapat memilih varian "harga" untuk model tabular / TCN-XGB).
+    price_models, multimodal_models = {"persistence", "arima", "lstm", "gru"}, {"bilstm", "dialstm", "tft"}
+    for m in df["model"].unique():
+        f = RESULTS / "frozen" / f"{m}.json"
+        if not f.exists():
+            continue
+        cfg = json.loads(f.read_text(encoding="utf-8"))["config"]
+        feats = cfg.get("model", {}).get("features") or cfg.get("stage2", {}).get("features")
+        if feats in ("harga", "embedding"):
+            price_models.add(m)
+        elif feats == "multimodal":
+            multimodal_models.add(m)
 
     price_df = df[df["model"].isin(price_models)]
     multi_df = df[df["model"].isin(multimodal_models)]
@@ -237,10 +250,14 @@ def generate_report_md(horizon: dict, commodity: dict, gaps: list,
 
 
 def main() -> int:
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--source", choices=["validation", "test"], default="validation")
+    args = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
-    logging.info("Loading results...")
+    logging.info("Loading results (%s)...", args.source)
 
-    df = load_all_results()
+    df = load_all_results(args.source)
     if df.empty:
         logging.error("Tidak ada hasil training! Jalankan training dulu.")
         return 1

@@ -37,14 +37,24 @@
     }
   },
   "validation": {
-    "folds": ["F1", "F2", "F3"],
+    "folds": ["F1", "F2"],
     "fold_boundaries": {
       "F1": "2022-07-01",
-      "F2": "2023-07-01",
-      "F3": "2024-07-01"
+      "F2": "2023-07-01"
     },
+    "final_role": "F3 = latih final (origin & label < test_start), lalu test sekali buka",
     "test_start": "2024-07-01",
     "test_end": "2026-09-30"
+  },
+  "prospective": {
+    "train_end": "2026-09-30",
+    "start": "2026-10-01",
+    "cutoff": "2027-01-15",
+    "protocol": "docs/PROTOKOL_UJI_PROSPEKTIF.md v1.0.0"
+  },
+  "availability": {
+    "climate_lag_days": 5,
+    "news_date_only_delay_days": 1
   },
   "training": {
     "seeds": [0, 1, 2, 3, 4],
@@ -53,7 +63,7 @@
     "weight_decay": 0.01,
     "huber_delta": 1.0,
     "steps": 320,
-    "threads": 2,
+    "threads": "auto",
     "clip": 1.0,
     "shock_weight": 2.0,
     "p_drop": 0.15

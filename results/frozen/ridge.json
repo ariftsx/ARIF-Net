@@ -1,0 +1,26 @@
+{
+ "model": "ridge",
+ "frozen_utc": "2026-10-23T15:21:49+00:00",
+ "selection": "rata-rata relMAE F1–F2, seed 0 (PROTOKOL P4-DG-05; epoch = hyperparameter v1.0.1)",
+ "score": 0.8738405818229217,
+ "per_fold": {
+  "F1": 0.8476908228279904,
+  "F2": 0.899990340817853
+ },
+ "n_candidates": 8,
+ "overrides": {
+  "model.params.alpha": 1000.0,
+  "model.features": "harga"
+ },
+ "config": {
+  "family": "tabular",
+  "_source": "Baseline linear multimodal",
+  "model": {
+   "kind": "ridge",
+   "features": "harga",
+   "params": {
+    "alpha": 1000.0
+   }
+  }
+ }
+}

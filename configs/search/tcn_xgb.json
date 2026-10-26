@@ -1,0 +1,21 @@
+{
+  "_doc": "Kandidat 0 = default paper (configs/models); lalu sampel acak grid, maks budget (search.py).",
+  "budget": 8,
+  "space": {
+    "stage1.train.epochs": [
+      5,
+      10,
+      20,
+      50
+    ],
+    "stage2.params.max_depth": [
+      4,
+      6,
+      10
+    ],
+    "stage2.features": [
+      "embedding",
+      "multimodal"
+    ]
+  }
+}

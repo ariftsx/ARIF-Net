@@ -1,0 +1,20 @@
+{
+  "_doc": "Kandidat 0 = default paper (configs/models); lalu sampel acak grid, maks budget (search.py).",
+  "budget": 8,
+  "space": {
+    "model.params.max_depth": [
+      null,
+      8,
+      16
+    ],
+    "model.params.min_samples_leaf": [
+      1,
+      5,
+      20
+    ],
+    "model.params.max_features": [
+      0.3,
+      0.6
+    ]
+  }
+}

@@ -1,6 +1,7 @@
 {
+  "family": "neural",
+  "_source": "Amalia et al. (2026) Tabel 2: hidden {16..128}, dropout {0..0,3}, lr {1e-5..1e-2}, heads {1..4}; point = kuantil 0,5 (loss MAE); harga + kalender known future",
   "model": {
-    "type": "neural",
     "name": "tft",
     "d": 32,
     "heads": 4,
@@ -8,14 +9,14 @@
     "emb": 8
   },
   "train": {
-    "steps": 320,
-    "batch": 256,
+    "loss": "mae",
     "lr": 0.001,
-    "weight_decay": 0.01,
-    "huber_delta": 1.0,
-    "clip": 1.0,
-    "threads": 2,
-    "shock_weight": 2.0
-  },
-  "description": "Temporal Fusion Transformer — Amalia et al. (2026)"
+    "weight_decay": 0.0,
+    "batch": 64,
+    "epochs": 50,
+    "clip": 0.0,
+    "threads": "auto",
+    "shock_weight": 1.0,
+    "L": 60
+  }
 }

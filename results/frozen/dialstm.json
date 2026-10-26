@@ -1,0 +1,39 @@
+{
+ "model": "dialstm",
+ "frozen_utc": "2026-10-23T20:23:55+00:00",
+ "selection": "rata-rata relMAE F1–F2, seed 0 (PROTOKOL P4-DG-05; epoch = hyperparameter v1.0.1)",
+ "score": 1.009905181537387,
+ "per_fold": {
+  "F1": 1.0140095993702696,
+  "F2": 1.0058007637045043
+ },
+ "n_candidates": 10,
+ "overrides": {
+  "train.L": 30,
+  "model.units": 16,
+  "train.lr": 0.0001,
+  "train.epochs": 20
+ },
+ "config": {
+  "family": "neural",
+  "_source": "Gu et al. (2022) Tabel 2: LSTM 6 unit (tanh), dropout 0,2, FC 10 → FC 1, Adam 1e-3, MSE, time step T=6 (grid {1,2,4,6,8,12}); input harga + iklim",
+  "model": {
+   "name": "dialstm",
+   "units": 16,
+   "fc": 10,
+   "dropout": 0.2,
+   "emb": 8
+  },
+  "train": {
+   "loss": "mse",
+   "lr": 0.0001,
+   "weight_decay": 0.0,
+   "batch": 64,
+   "epochs": 20,
+   "clip": 0.0,
+   "threads": "auto",
+   "shock_weight": 1.0,
+   "L": 30
+  }
+ }
+}
