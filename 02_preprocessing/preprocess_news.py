@@ -1,4 +1,4 @@
-﻿"""
+"""
 ARIF-Net -- Preprocessing berita: sentimen & agregasi fitur news.
 
 Membaca articles_relevant.csv + body text -> menghasilkan fitur news per hari:
@@ -111,8 +111,14 @@ def aggregate_daily(articles: pd.DataFrame) -> pd.DataFrame:
     if articles.empty:
         return pd.DataFrame()
 
-    # Ekstrak tanggal dari published_at_wib
-    articles["pub_date"] = pd.to_datetime(articles["published_at_wib"]).dt.date
+    # Tanggal tersedia (Data Contract §6, P1-DG-34): ber-jam -> tanggal terbit WIB;
+    # tanggal saja (tanpa jam / T00:00:00, mis. detik) -> +1 hari; tanpa waktu terbit -> dikeluarkan.
+    # Fitur origin t hanya dari artikel dengan tanggal tersedia <= t.
+    raw = articles["published_at_wib"].astype(str)
+    date_only = ~raw.str.contains("T") | raw.str.contains("T00:00:00")
+    pub = pd.to_datetime(raw.str[:10], errors="coerce")
+    articles = articles.assign(pub_date=(pub + pd.to_timedelta(date_only.astype(int), unit="D")).dt.date)
+    articles = articles[pub.notna()]
 
     # Parse topics
     cfg_path = Path(__file__).resolve().parents[1] / "configs" / "news_scope.json"

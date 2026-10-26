@@ -1,4 +1,4 @@
-﻿"""
+"""
 ARIF-Net -- Preprocessing data iklim.
 
 Membaca raw JSON dari Open-Meteo -> normalisasi per lokasi per hari.
